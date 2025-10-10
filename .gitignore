@@ -1,0 +1,27 @@
+# Dependencies
+/node_modules
+
+# Build output
+dist/
+bin/
+*.tsbuildinfo
+
+# IDE directories
+.idea/
+.vscode/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+.tgz
+
+
+*.bun-build

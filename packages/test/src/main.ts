@@ -1,14 +1,20 @@
-import { Command } from 'commander'
+import { devCliProgram } from '#common/devCliProgram'
 
-const program = new Command()
+const program = devCliProgram({ name: 'test', summary: 'Test Command' })
 
-program.name('test').description('test utilities').version('1.0.0')
-
+// Sub commands
 program
   .command('ping')
   .description('Test ping')
   .action(() => {
     console.log('pong')
+  })
+
+program
+  .command('other')
+  .description('other')
+  .action(() => {
+    console.log('other')
   })
 
 program.parse()

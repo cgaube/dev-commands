@@ -10,8 +10,11 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "~common/*": ["./common/*"],
-      "~src/*": ["${configDir}/src/*"],
-    }
-  }
+      "#common/*": ["./common/*"],
+      "#src/*": ["${configDir}/src/*"]
+    },
+    "outDir": "${configDir}/dist"
+  },
+  "include": ["${configDir}/src/**/*"],
+  "exclude": ["node_modules", "${configDir}/node_modules"]
 }

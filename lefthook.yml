@@ -1,0 +1,23 @@
+# lefthook.yml
+output:
+  - summary
+  - success
+  - failure
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: prettier
+      glob: '*.{js,ts,jsx,tsx,json,yml,yaml,md}'
+      run: bun run format {staged_files}
+    - name: eslint
+      glob: '*.{js,ts,jsx,tsx}'
+      run: bun run lint {staged_files}
+
+pre-push:
+  parallel: true
+  jobs:
+    - name: format-check
+      run: bun run format:check
+    - name: lint-check
+      run: bun run lint:check

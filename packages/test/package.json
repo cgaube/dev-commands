@@ -8,9 +8,10 @@
   "repository": "",
   "type": "module",
   "scripts": {
-    "build": "bun build src/main.ts --outfile dist/test",
-    "compile": "bun build src/main.ts --compress --compile --outfile bin/test",
-    "compile:watch": "bun run compile --watch"
+    "build": "bun run check && bun build src/main.ts --outfile dist/test",
+    "compile": "bun run check && bun build src/main.ts --compress --compile --outfile bin/test",
+    "compile:watch": "bun run compile --watch",
+    "check": "tsc --noEmit"
   },
   "dependencies": {
     "@clack/prompts": "^0.11.0",

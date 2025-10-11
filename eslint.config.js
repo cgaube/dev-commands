@@ -1,3 +1,5 @@
+// @ts-check
+
 import tsEslint from 'typescript-eslint'
 import prettierConfig from 'eslint-config-prettier'
 import { defineConfig } from 'eslint/config'
@@ -9,7 +11,7 @@ export default defineConfig(
   tsEslint.configs.recommended,
   {
     ...prettierConfig,
-    name: 'app/prettier',
+    name: 'prettier/recommended',
   },
   {
     name: 'app/globals',
@@ -19,5 +21,5 @@ export default defineConfig(
     rules: {
       // You can add any custom rule overrides here
     },
-  }
+  },
 )

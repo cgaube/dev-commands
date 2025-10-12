@@ -1,13 +1,41 @@
-import { bold, cyan, bgBlack, white, red } from 'picocolors'
+import * as picocolors from 'picocolors'
+import { createColorize } from 'colorize-template'
+import { intro } from '@clack/prompts'
 
-// 1. Define Reusable Styles
-// A reusable function that applies multiple styles: bold + cyan color.
-const highlight = (text: string) => bold(cyan(text))
+type ColorName = keyof typeof picocolors
 
-// A reusable function for a title block: bold, white text on black background.
-const titleBlock = (text: string) => bold(bgBlack(white(` ${text} `)))
+// Use colorize template
+// colorize`Is red {red color} text`
+const colorize = createColorize({
+  ...picocolors,
+  success: picocolors.green,
+  error: picocolors.red,
+})
 
-// A reusable function for an error title.
-const errorBlock = (text: string) => bold(bgBlack(red(` ✗ ${text} `)))
+// Re-usable Styles
+const pill = (
+  text: string,
+  bgColor: ColorName,
+  textColor: ColorName = 'black',
+): string => {
+  let bgColorKey: ColorName
+  let borderColorKey: ColorName
 
-export { highlight, titleBlock, errorBlock }
+  if (bgColor.startsWith('bg')) {
+    bgColorKey = bgColor
+    borderColorKey = bgColor.slice(2).toLowerCase() as ColorName
+  } else {
+    bgColorKey =
+      `bg${bgColor.charAt(0).toUpperCase() + bgColor.slice(1)}` as ColorName
+    borderColorKey = bgColor
+  }
+
+  return colorize`{${borderColorKey} \ue0b6}{${bgColorKey}.${textColor} ${text}}{${borderColorKey} \ue0b4}`
+}
+
+const introTitle = (text: string) => {
+  const styledInto = colorize`{bgGreen.black ${text}}`
+  return intro(styledInto)
+}
+
+export { picocolors as color, picocolors, colorize, pill, introTitle }

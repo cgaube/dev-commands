@@ -19,7 +19,7 @@ export default defineConfig(
       globals: globals.node,
     },
     rules: {
-      // You can add any custom rule overrides here
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 )

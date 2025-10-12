@@ -6,6 +6,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
+    "ts:check": "bun run --workspaces ts:check",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:check": "eslint --cache --max-warnings 0 .",

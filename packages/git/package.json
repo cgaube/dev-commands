@@ -1,13 +1,9 @@
 {
-  "name": "@devcommands/test",
+  "name": "@devcommands/git",
   "version": "0.0.0",
-  "description": "TEST CLI",
-  "author": "",
-  "homepage": "",
-  "license": "MIT",
-  "repository": "",
   "type": "module",
   "scripts": {
+    "git": "bun run src/main.ts",
     "build": "bun run check && bun build src/main.ts --outfile dist/test",
     "compile": "bun run check && bun build src/main.ts --compress --compile --outfile bin/test",
     "compile:watch": "bun run compile --watch",

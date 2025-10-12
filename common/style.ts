@@ -12,7 +12,7 @@ const colorize = createColorize({
   error: picocolors.red,
 })
 
-// Re-usable Styles
+// @note uses nf-ple-left_half_circle_thick nf-ple-right_half_circle_thick from nerdfont compatible fonts
 const pill = (
   text: string,
   bgColor: ColorName,
@@ -34,7 +34,7 @@ const pill = (
 }
 
 const introTitle = (text: string) => {
-  const styledInto = colorize`{bgGreen.black ${text}}`
+  const styledInto = pill(text, 'white', 'black')
   return intro(styledInto)
 }
 

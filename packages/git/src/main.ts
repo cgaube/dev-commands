@@ -1,6 +1,6 @@
 import { devCliProgram } from '#common/devCliProgram'
 import { branchesChoices } from './utils/branches'
-import { intro, cancel, isCancel, spinner, select } from '@clack/prompts'
+import { cancel, isCancel, spinner, select } from '@clack/prompts'
 import { color, introTitle } from '#common/style'
 import { executeCommand, getJsonFromCommand } from '#common/commands'
 
@@ -15,7 +15,7 @@ git
   .alias('switch')
   .description('Better checkout experience')
   .action(async () => {
-    intro('Git Checkout')
+    introTitle('Git Checkout')
 
     const branch = await branchesChoices()
     if (isCancel(branch)) {
@@ -31,7 +31,7 @@ git
   .command('pr')
   .description('Checkout a PR branch')
   .action(async () => {
-    intro('Git Checkout from PR branch')
+    introTitle('Git Checkout from PR branch')
 
     // Fetch all PR info
     const s = spinner()

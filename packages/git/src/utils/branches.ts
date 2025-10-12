@@ -1,6 +1,6 @@
 import { execaSync } from 'execa'
 import { select, multiselect } from '@clack/prompts'
-import { picocolors, pill } from '#common/style'
+import { picocolors } from '#common/style'
 
 const getCurrentBranch = () => {
   return execaSync('git', ['rev-parse', '--abbrev-ref', 'HEAD']).stdout.trim()
@@ -21,7 +21,7 @@ async function branchesChoices(multi: true): Promise<string[] | symbol>
 async function branchesChoices(multi?: false): Promise<string | symbol>
 async function branchesChoices(multi = false) {
   const branches = getBranches().map((b) => {
-    const [branchName, sha, subject, author, date, selected] = b
+    const [branchName, sha, subject, author, date, current] = b
       .trim()
       .split(' || ')
 
@@ -34,10 +34,14 @@ async function branchesChoices(multi = false) {
       picocolors.red(sha),
       subject,
       picocolors.blue(author),
-      picocolors.dim(picocolors.green(`(${formattedDate})`)),
+      picocolors.green(`(${formattedDate})`),
       // Tags
-      selected ? pill('current', 'cyan') : null,
-      workInProgress ? pill('WIP', 'yellow') : null,
+      [
+        current ? picocolors.cyan('[current]') : null,
+        workInProgress ? picocolors.magenta('[WIP]') : null,
+      ]
+        .filter((n) => n)
+        .join(' '),
     ].filter((n) => n)
 
     return {
@@ -47,13 +51,13 @@ async function branchesChoices(multi = false) {
   })
 
   if (multi) {
-    return await select({
-      message: 'Select a branch',
+    return await multiselect({
+      message: 'Select branches',
       options: branches,
     })
   } else {
-    return await multiselect({
-      message: 'Select branches',
+    return await select({
+      message: 'Select a branch',
       options: branches,
     })
   }

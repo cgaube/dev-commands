@@ -22,6 +22,8 @@ export function devCliProgram({ name, summary }: Params) {
       if (options.complete) {
         return autoComplete(program, optionalArgs)
       }
+
+      program.help()
     })
 
   return program

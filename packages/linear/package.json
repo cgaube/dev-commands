@@ -1,11 +1,11 @@
 {
-  "name": "@devcommands/git",
+  "name": "@devcommands/linear",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "git": "bun run src/main.ts",
-    "build": "bun run ts:check && bun build src/main.ts --outfile dist/git",
-    "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/git",
+    "linear": "bun run src/main.ts",
+    "build": "bun run ts:check && bun build src/main.ts --outfile dist/linear",
+    "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outdir bin --outfile bin/linear",
     "compile:watch": "bun run compile --watch",
     "ts:check": "tsc --noEmit"
   },

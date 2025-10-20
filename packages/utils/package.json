@@ -1,11 +1,10 @@
 {
-  "name": "@devcommands/git",
+  "name": "@devcommands/utils",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "git": "bun run src/main.ts",
-    "build": "bun run ts:check && bun build src/main.ts --outfile dist/git",
-    "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/git",
+    "build": "bun run ts:check && bun build src/main.ts --outfile dist/utils",
+    "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/utils",
     "compile:watch": "bun run compile --watch",
     "ts:check": "tsc --noEmit"
   },

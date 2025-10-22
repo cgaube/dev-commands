@@ -12,13 +12,13 @@ import {
   multiselect,
   isCancel,
 } from '@clack/prompts'
-import { introTitle, colorize } from '../style'
+import { introTitle, colorize, exitWithError } from '../style'
 import { homedir } from 'os'
 import { ConfigStore } from './configStore'
 
-export default async function setupProgramConfiguration(
+export default function setupProgramConfiguration<TSchema extends ConfigSchema>(
   programName: string,
-  configSchema: ConfigSchema,
+  configSchema: TSchema,
 ) {
   const buildConfigStore = async (dir: string = process.cwd()) => {
     const store = new ConfigStore(programName, dir, configSchema)
@@ -26,11 +26,16 @@ export default async function setupProgramConfiguration(
     return store
   }
 
-  const getConfigStore = async () => await buildConfigStore()
+  let configStore: ConfigStore | undefined = undefined
+  const getConfigStore = async () => {
+    if (!configStore) {
+      configStore = await buildConfigStore()
+    }
+    return configStore
+  }
 
-  const configStore = await getConfigStore()
-
-  const exitIfInvalid = (strict: boolean = false) => {
+  const exitIfInvalid = async (strict: boolean = false) => {
+    const configStore = await getConfigStore()
     if (!configStore.isValid(strict)) {
       log.error(
         colorize`Please initialize the program configuration {dim dev ${configStore.program} config init}`,
@@ -42,20 +47,21 @@ export default async function setupProgramConfiguration(
   const injectConfigCommands = (program: Command) => {
     const configCommand = program
       .command('config')
-      .description('Configure application')
+      .description('manage application configuration')
 
     // Initialize dev-command configuration based on the ConfigSchema
     configCommand
       .command('init')
-      .description('Initialize the configuration for this application')
+      .description('initialize application configuration')
       .action(async () => {
         // use config to build a clack group of question
         introTitle(`Configure ${program.name()}`)
 
         const configStore = await buildConfigStore(homedir())
 
-        // Render all prompts
-        const result = await group(buildPrompts(), {
+        // Render all global config prompts
+        const prompts = await buildPrompts({ global: true })
+        const result = await group(prompts, {
           onCancel() {
             cancel('Operation cancelled.')
             process.exit(0)
@@ -66,72 +72,92 @@ export default async function setupProgramConfiguration(
         outro(colorize`Configuration saved in {dim ${configFile}}`)
       })
 
-    configCommand.command('override').action(async () => {
-      introTitle(`Override configuration for ${program.name()}`)
-      const configStore = await getConfigStore()
+    configCommand
+      .command('override')
+      .alias('set')
+      .argument(
+        '[name]',
+        'The config to override, Leave empty for interactively pick configs',
+      )
+      .description('override application configuration')
+      .action(async (name) => {
+        introTitle(`Override configuration for ${program.name()}`)
+        const configStore = await getConfigStore()
 
-      exitIfInvalid(true)
+        await exitIfInvalid(true)
 
-      const currentDir = process.cwd()
-      const homeDir = homedir()
+        const currentDir = process.cwd()
+        const homeDir = homedir()
 
-      // Make sure we are inside the homedir
-      if (!currentDir.startsWith(homeDir) || currentDir === homeDir) {
-        return cancel(
-          'You can only override configurations in the subdirectories of your home folder',
-        )
-      }
+        // Make sure we are inside the homedir
+        if (!currentDir.startsWith(homeDir) || currentDir === homeDir) {
+          return exitWithError(
+            'You can only override configurations in the subdirectories of your home folder',
+          )
+        }
 
-      const currentOverrides = await configStore.getOverrides()
-      if (currentOverrides) {
-        log.info(
-          `Current overrides: ${Object.keys(currentOverrides).join(', ')}`,
-        )
-      }
+        const currentOverrides = await configStore.getOverrides()
+        if (currentOverrides) {
+          log.info(
+            `Current overrides: ${Object.keys(currentOverrides).join(', ')}`,
+          )
+        }
 
-      // Pick what config to override
-      const choices = await multiselect({
-        message: 'Pick the configuration to override',
-        options: Object.entries(configStore.configSchema).map(
-          ([key, value]) => {
-            return {
-              value: key,
-              label: value.label,
-              hint: value.description,
-            }
+        let promptChoices: string[] = []
+        if (name) {
+          const config = configStore.configSchema[name]
+          if (!config) {
+            return exitWithError('Invalid config name')
+          }
+          promptChoices = [name]
+        } else {
+          // Pick what config to override
+          const choices = await multiselect({
+            message: 'Pick the configuration to override',
+            options: Object.entries(configStore.configSchema).map(
+              ([key, value]) => {
+                return {
+                  value: key,
+                  label: value.label,
+                  hint: value.description,
+                }
+              },
+            ),
+            initialValues: Object.keys(currentOverrides || {}),
+          })
+
+          if (isCancel(choices)) {
+            return cancel('Operation cancelled.')
+          }
+
+          promptChoices = choices as string[]
+        }
+
+        const prompts = await buildPrompts({ only: promptChoices })
+        const result = await group(prompts, {
+          onCancel() {
+            cancel('Operation cancelled.')
+            process.exit(0)
           },
-        ),
-        initialValues: Object.keys(currentOverrides || {}),
-      })
+        })
 
-      if (isCancel(choices)) {
-        return cancel('Operation cancelled.')
-      }
-
-      const result = await group(buildPrompts(choices), {
-        onCancel() {
-          cancel('Operation cancelled.')
-          process.exit(0)
-        },
-      })
-
-      await tasks([
-        {
-          title: 'Saving overrides files',
-          task: async () => {
-            const file = await configStore.saveConfig(result)
-            return colorize`Configuration saved in {dim ${file}}`
+        await tasks([
+          {
+            title: 'Saving overrides files',
+            task: async () => {
+              const file = await configStore.saveConfig(result)
+              return colorize`Configuration saved in {dim ${file}}`
+            },
           },
-        },
-      ])
+        ])
 
-      outro()
-    })
+        outro()
+      })
 
     // Clear command
     configCommand
       .command('clear')
-      .description('Get rid of all config files')
+      .description('clear all configuration files')
       .action(async () => {
         introTitle('Clear config')
 
@@ -158,37 +184,53 @@ export default async function setupProgramConfiguration(
       })
 
     // Debug Command
-    configCommand.command('debug').action(async () => {
-      introTitle('Debugging config')
+    configCommand
+      .command('debug')
+      .description('display current configuration')
+      .action(async () => {
+        introTitle('Debugging config')
 
-      const config = await getConfigStore()
-      const all = await config.getConfigs()
+        const config = await getConfigStore()
+        const all = await config.getConfigs()
 
-      const overridePaths = Object.entries(all).map(([path, config]) => {
-        if (config !== null) {
-          return colorize`{dim.green \u2714} ${path}`
-        } else {
-          return colorize`{dim {red \u2716} ${path}}`
-        }
+        const overridePaths = Object.entries(all).map(([path, config]) => {
+          if (config !== null) {
+            return colorize`{dim.green \u2714} ${path}`
+          } else {
+            return colorize`{dim {red \u2716} ${path}}`
+          }
+        })
+
+        log.info('Configs extracted from:\n ' + overridePaths.join('\n '))
+
+        note(
+          JSON.stringify(await config.getAll(), null, 2),
+          `Configuration Values:`,
+        )
       })
-
-      log.info('Configs extracted from:\n ' + overridePaths.join('\n '))
-
-      note(
-        JSON.stringify(await config.getAll(), null, 2),
-        `Configuration Values:`,
-      )
-    })
   }
 
-  const buildPrompts = <T extends ConfigSchema>(only: (keyof T)[] = []) => {
+  const buildPrompts = async <T extends ConfigSchema>({
+    only = [],
+    global = false,
+  }: {
+    only?: (keyof T)[]
+    global?: boolean
+  } = {}) => {
+    const configStore = await getConfigStore()
     const prompts: any = {}
 
     for (const key of Object.keys(configSchema)) {
       if (only.length > 0 && !only.includes(key)) {
         continue
       }
+
       const configSetting = configSchema[key]
+
+      if (global === true && configSetting['global'] !== true) {
+        continue
+      }
+
       prompts[key] = async () => {
         let message = configSetting.label
         if (configSetting.description) {
@@ -204,7 +246,7 @@ export default async function setupProgramConfiguration(
           initialValue: await configStore.get(key),
           // Require value
           validate(value) {
-            if (configSetting.required && value.length === 0)
+            if (configSetting.required && (value || '').length === 0)
               return `Value is required!`
           },
         })
@@ -214,5 +256,10 @@ export default async function setupProgramConfiguration(
     return prompts
   }
 
-  return { configStore, exitIfInvalid, injectConfigCommands }
+  async function getConfig(key: keyof TSchema & string) {
+    const store = await getConfigStore()
+    return store.get(key)
+  }
+
+  return { getConfig, getConfigStore, exitIfInvalid, injectConfigCommands }
 }

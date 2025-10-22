@@ -9,12 +9,12 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    // Paths are defined once here and resolved relative to the `baseUrl`
+    // set in each subpackage's tsconfig.json.
     "paths": {
-      "#common/*": ["./common/*"],
-      "#src/*": ["${configDir}/src/*"]
-    },
-    "outDir": "${configDir}/dist"
-  },
-  "include": ["${configDir}/src/**/*"],
-  "exclude": ["node_modules", "${configDir}/node_modules"]
+      "#common/*": ["../../common/*"],
+      "#src/*": ["./src/*"]
+    }
+  }
 }

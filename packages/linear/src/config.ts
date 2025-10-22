@@ -1,21 +1,15 @@
-import type { ConfigSchema } from '#common/config/types'
 import setupProgramConfiguration from '#common/config'
+import { ConfigSchema } from '#common/config/types'
 
-const config: ConfigSchema = {
-  api_key: {
+const config = {
+  apiKey: {
     label: 'Api Key',
     description: 'Api key to access linear GraphQL api',
     secret: true,
     required: true,
+    global: true,
   },
-  test: {
-    label: 'Other config',
-  },
-  default_val: {
-    label: 'Default',
-    defaultValue: 'default value',
-  },
-}
+} satisfies ConfigSchema
 
-export const { configStore, exitIfInvalid, injectConfigCommands } =
-  await setupProgramConfiguration('linear', config)
+export const { getConfig, injectConfigCommands, exitIfInvalid } =
+  setupProgramConfiguration('linear', config)

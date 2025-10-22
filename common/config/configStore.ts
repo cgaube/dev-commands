@@ -82,7 +82,7 @@ export class ConfigStore {
     return Object.fromEntries(entries)
   }
 
-  async get(key: string): Promise<ConfigValue> {
+  async get(key: string) {
     const originalValue = this.data[key]
 
     if (originalValue && originalValue.type === 'secret') {

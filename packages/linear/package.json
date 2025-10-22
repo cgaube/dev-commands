@@ -5,15 +5,19 @@
   "scripts": {
     "linear": "bun run src/main.ts",
     "build": "bun run ts:check && bun build src/main.ts --outfile dist/linear",
-    "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outdir bin --outfile bin/linear",
+    "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/linear",
     "compile:watch": "bun run compile --watch",
     "ts:check": "tsc --noEmit"
   },
   "dependencies": {
-    "@clack/prompts": "^0.11.0",
+    "@clack/prompts": "^1.0.0-alpha.6",
+    "@linear/sdk": "^61.0.0",
+    "@types/voca": "^1.4.6",
     "colorize-template": "^1.0.0",
     "commander": "^14.0.1",
     "execa": "^9.6.0",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "voca": "^1.4.1",
+    "yargs-parser": "^22.0.0"
   }
 }

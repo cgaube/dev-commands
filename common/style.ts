@@ -1,11 +1,10 @@
 import * as picocolors from 'picocolors'
 import { createColorize } from 'colorize-template'
-import { intro } from '@clack/prompts'
+import { intro, log, cancel, isCancel } from '@clack/prompts'
 
-type ColorName = keyof typeof picocolors
+type ColorName = keyof typeof picocolors & string
 
 // Use colorize template
-// colorize`Is red {red color} text`
 const colorize = createColorize({
   ...picocolors,
   success: picocolors.green,
@@ -38,4 +37,38 @@ const introTitle = (text: string) => {
   return intro(styledInto)
 }
 
-export { picocolors as color, picocolors, colorize, pill, introTitle }
+/**
+ * Exit the program with a red error message and code 1
+ */
+const exitWithError = (message: string) => {
+  log.error(picocolors.red(message))
+  cancel()
+  process.exit(1)
+}
+
+/**
+ * Exit with code 0 with a cancel message
+ */
+const exitWithCancel = (message: string = 'Operation cancelled.') => {
+  cancel(message)
+  process.exit(0)
+}
+
+/**
+ * Check if choice is cancel and exit if it is
+ */
+export function exitOnCancel(choice: any) {
+  if (isCancel(choice)) {
+    exitWithCancel()
+  }
+}
+
+export {
+  picocolors as colors,
+  picocolors,
+  colorize,
+  pill,
+  introTitle,
+  exitWithError,
+  exitWithCancel,
+}

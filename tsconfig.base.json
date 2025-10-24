@@ -1,17 +1,13 @@
 {
   "compilerOptions": {
-    // Bun/Node ESM Compatibility
-    "target": "es2022",
-    "module": "es2022",
+    "target": "esnext",
+    "module": "esnext",
     "moduleResolution": "bundler",
-    // Standard modern TS settings
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
-    // Paths are defined once here and resolved relative to the `baseUrl`
-    // set in each subpackage's tsconfig.json.
     "paths": {
       "#common/*": ["../../common/*"],
       "#src/*": ["./src/*"]

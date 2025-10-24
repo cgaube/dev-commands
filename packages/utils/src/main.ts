@@ -5,6 +5,7 @@ import { execa } from 'execa'
 import figlet from 'figlet'
 import readline from 'readline'
 import { Duration } from 'luxon'
+import font from './Colossal.flf' with { type: 'text' }
 
 const utils = devCliProgram({
   name: 'utils',
@@ -23,12 +24,8 @@ utils
     process.stdout.write('\x1b[2J\x1b[0;0H')
     intro()
 
-    await figlet('  Stay Awake  ', 'Colossal', function (err, data) {
-      if (err || !data) {
-        return
-      }
-      log.message(data)
-    })
+    figlet.parseFont('Default', font)
+    log.message(figlet.textSync('  Stay Awake  ', { font: 'Default' }))
 
     const duration = Duration.fromObject({ seconds: options.time }).shiftTo(
       'days',

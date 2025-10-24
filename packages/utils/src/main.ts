@@ -3,6 +3,7 @@ import { log, intro, outro } from '@clack/prompts'
 import { introTitle, colorize } from '#common/style'
 import { execa } from 'execa'
 import figlet from 'figlet'
+import readline from 'readline'
 import { Duration } from 'luxon'
 import font from './Colossal.flf' with { type: 'text' }
 
@@ -41,10 +42,9 @@ utils
 
     // Capture Ctrl-C in parent process
     process.on('SIGINT', () => {
-      // Get rid of the ^C and new line
-      process.stdout.write('\r\x1b[K')
-      process.stdout.write('\x1b[1A')
-      process.stdout.write('\r\x1b[K')
+      // Get rid of the ^C
+      readline.clearLine(process.stdout, 0)
+      readline.cursorTo(process.stdout, 0)
 
       const elapsedSeconds = Math.floor((Date.now() - start) / 1000)
       const awakeFor = Duration.fromObject({ seconds: elapsedSeconds })

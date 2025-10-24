@@ -1,4 +1,4 @@
-import { cancel, log, outro, spinner } from '@clack/prompts'
+import { cancel, log, spinner } from '@clack/prompts'
 import { execa } from 'execa'
 import { colorize } from './style'
 
@@ -34,10 +34,6 @@ const executeCommand = async (
     if (displayOptions.displayCommandResult) {
       log.info(stdout as string)
     }
-
-    if (displayOptions.lastCommand) {
-      outro()
-    }
   } catch (error: any) {
     const errorMessage = colorize`{error Error:} {dim ${logCommand}}`
     s.stop(errorMessage, 1)
@@ -46,10 +42,10 @@ const executeCommand = async (
       const errorMessage = error.stderr || error.message
       log.message(errorMessage)
     }
+  }
 
-    if (displayOptions.lastCommand) {
-      cancel()
-    }
+  if (displayOptions.lastCommand) {
+    cancel()
   }
 }
 

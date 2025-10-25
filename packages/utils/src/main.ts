@@ -32,11 +32,11 @@ utils
       'hours',
     )
     log.info(
-      colorize`Duration: ${duration.toHuman()}. {dim Press Ctrl+C to cancel}`,
+      colorize`Duration: ${duration.toHuman()}.\n{dim Press Ctrl+C to cancel}`,
     )
     const start = Date.now()
 
-    const caffeinate = execa('caffeinate', ['-u', '-t', options.time], {
+    const caffeinate = execa('caffeinate', ['-disu', '-t', options.time], {
       stdio: 'inherit',
     })
 
@@ -48,7 +48,9 @@ utils
 
       const elapsedSeconds = Math.floor((Date.now() - start) / 1000)
       const awakeFor = Duration.fromObject({ seconds: elapsedSeconds })
-      log.info(`Was awake for ${awakeFor.toHuman({ unitDisplay: 'short' })}`)
+      log.info(
+        `Was kept awake for ${awakeFor.toHuman({ unitDisplay: 'short' })}`,
+      )
       outro('Go to bed! 😴')
       caffeinate.kill('SIGINT')
       process.exit(0)
@@ -64,7 +66,12 @@ utils
     introTitle('Port Listeners')
 
     try {
-      const { stdout } = await execa('lsof', ['-i', `:${port}`])
+      const { stdout } = await execa('lsof', [
+        '-i',
+        `:${port}`,
+        '-s',
+        'TCP:LISTEN',
+      ])
       log.info(stdout as string)
     } catch {
       log.warning('No processes are listening on this port.')

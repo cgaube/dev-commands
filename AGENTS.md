@@ -4,7 +4,7 @@ All CLI applications are located in the `packages` folder. They share common
 dependencies to ensure consistent execution, functionality, and a unified user
 experience across all tools:
 
-- `@clack/prompt` – for user interaction and displaying messages
+- `@clack/prompts` – for user interaction and displaying messages
 - `colorize-template` and `picocolors` – for styling and color formatting
 - `execa` – for executing commands
 - `commander` – for parsing and managing main commands and subcommands
@@ -18,8 +18,8 @@ called `dev-cli`, for example:
 dev package [...subcommand]
 ```
 
-Each individual application should follow this structure to ensure seamless
-integration and consistent behavior across the entire toolset.
+Each application should follow this structure to ensure seamless integration and
+consistent behavior across the entire toolset.
 
 # Best Practices
 
@@ -33,3 +33,11 @@ For example, command summaries must
 - Avoid technical jargon unless necessary.
 - Keep it under ~50 characters if possible; clarity is more important than
   length.
+
+# New packages
+
+When asked to create a new package, follow the instructions above and also look
+at how other packages are created and do things Follow the same structure
+packages/[NAME]/src/main.ts
+
+copy the same packages.json script by changing the name at the right places

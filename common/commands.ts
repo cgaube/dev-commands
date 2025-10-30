@@ -10,7 +10,6 @@ import {
 import { execa, ExecaError } from 'execa'
 import { colors, colorize } from './style'
 import { clearLine, moveCursor } from 'readline'
-import { sleep } from 'bun'
 import { CommandOutput } from './utils/commandOutput'
 
 type ExecuteOptions = {
@@ -31,7 +30,7 @@ const clearLastLines = (n: number) => {
 /**
  * Execute an execa command and return its output
  */
-function execaCallback(
+async function execaCallback(
   command: string,
   args: string[],
   options: ExecuteOptions = {},
@@ -41,7 +40,6 @@ function execaCallback(
   const successMessage = colorize`{green Executed:} {dim ${logCommand}}`
 
   const callback = async () => {
-    await sleep(3000)
     const { stdout } = await execa(command, args)
     return new CommandOutput(stdout.toString().trim())
   }
@@ -88,7 +86,11 @@ async function spinnerCallback<T = any>(
 
       if (outputError) {
         log.message(
-          colors.dim(errorMessage ? error.message : error.originalMessage),
+          colors.dim(
+            errorMessage
+              ? error.message
+              : error.originalMessage || error.stderr,
+          ),
         )
       }
     } else {

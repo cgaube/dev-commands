@@ -7,6 +7,7 @@ import {
   taskLogCommand,
   spinnerCallback,
   outroOrCancel,
+  execaCallback,
 } from '#common/commands'
 
 const tap = 'cgaube/devcommands'
@@ -22,6 +23,9 @@ pkg
   .description(`Install a package from the ${tap} tap`)
   .action(async (packageName: string) => {
     introTitle('Install Package')
+
+    // Update brew first
+    await execaCallback('brew', ['update'])
 
     const success = await taskLogCommand('brew', [
       'reinstall',

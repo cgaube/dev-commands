@@ -17,7 +17,6 @@
     "commander": "^14.0.1",
     "execa": "^9.6.0",
     "picocolors": "^1.1.1",
-    "voca": "^1.4.1",
-    "yargs-parser": "^22.0.0"
+    "voca": "^1.4.1"
   }
 }

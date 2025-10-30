@@ -1,7 +1,7 @@
 import { devCliProgram } from '#common/devCliProgram'
 import { branchesChoices } from './utils/branches'
 import { outro, cancel, isCancel, select } from '@clack/prompts'
-import { color, introTitle } from '#common/style'
+import { colors, introTitle } from '#common/style'
 import { taskLogCommand, execaCallback } from '#common/commands'
 
 const git = devCliProgram({
@@ -33,22 +33,23 @@ git
     introTitle('Git Checkout from PR branch')
 
     // Fetch all PR info
-    const prList = await execaCallback(
+    const prListOutput = await execaCallback(
       'gh',
       ['pr', 'list', '--json=id,title,author,headRefName'],
       {
         startMessage: 'Fetching all PR via gh',
-        stopMessage: 'PR list correctly fetched',
+        successMessage: 'PR list correctly fetched',
       },
-    ).toJson()
+    )
+    const pullRequests = prListOutput.toJson()
 
-    if (prList.length == 0) {
+    if (pullRequests.length == 0) {
       return cancel('Could not fetch any PR for this repository')
     }
 
-    const choices = prList.map((pr: any) => {
+    const choices = pullRequests.map((pr: any) => {
       return {
-        label: `${color.blue(pr.author.login)} -> ${pr.title}`,
+        label: `${colors.blue(pr.author.login)} -> ${pr.title}`,
         value: pr.headRefName,
       }
     })

@@ -3,7 +3,6 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "git": "bun run src/main.ts",
     "build": "bun run ts:check && bun build src/main.ts --outfile dist/git",
     "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/git",
     "compile:watch": "bun run compile --watch",

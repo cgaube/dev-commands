@@ -1,57 +1,188 @@
-import { cancel, log, spinner } from '@clack/prompts'
-import { execa } from 'execa'
-import { colorize } from './style'
+import {
+  cancel,
+  log,
+  spinner,
+  SpinnerOptions,
+  taskLog,
+  outro,
+  TaskLogCompletionOptions,
+} from '@clack/prompts'
+import { execa, ExecaError } from 'execa'
+import { colors, colorize } from './style'
+import { clearLine, moveCursor } from 'readline'
+import { sleep } from 'bun'
+import { CommandOutput } from './utils/commandOutput'
 
-type DisplayOptions = {
-  lastCommand?: boolean // Whether this is the last commmand of cli (we will display outro)
-  displayCommandResult?: boolean
-  displayError?: boolean
+type ExecuteOptions = {
+  startMessage?: string
+  successMessage?: string
+  errorMessage?: string
+  outputError?: boolean
+  spinnerOptions?: SpinnerOptions
 }
 
-const executeCommand = async (
+const clearLastLines = (n: number) => {
+  for (let i = 0; i < n; i++) {
+    moveCursor(process.stdout, 0, -1) // move up one line
+    clearLine(process.stdout, 0) // clear entire line
+  }
+}
+
+/**
+ * Execute an execa command and return its output
+ */
+function execaCallback(
   command: string,
   args: string[],
-  options?: DisplayOptions,
-) => {
-  const displayOptions = {
-    displayCommandResult: true,
-    displayError: true,
-    ...options,
-  }
+  options: ExecuteOptions = {},
+) {
   const logCommand = `${command} ${args.join(' ')}`
-
-  const s = spinner()
-
   const startMessage = colorize`{blue Executing:} {dim ${logCommand}}`
+  const successMessage = colorize`{green Executed:} {dim ${logCommand}}`
+
+  const callback = async () => {
+    await sleep(3000)
+    const { stdout } = await execa(command, args)
+    return new CommandOutput(stdout.toString().trim())
+  }
+
+  return spinnerCallback(callback, {
+    startMessage,
+    successMessage,
+    ...options,
+  })
+}
+
+// Execute command in background to capture output
+// stop spinner when done - clear if no success message
+async function spinnerCallback<T = any>(
+  callback: (() => T) | (() => Promise<T>),
+  options: ExecuteOptions = {},
+) {
+  const {
+    startMessage = undefined,
+    successMessage = undefined,
+    errorMessage = undefined,
+    outputError = true,
+    spinnerOptions = {},
+  } = options
+
+  const s = spinner(spinnerOptions)
   s.start(startMessage)
 
   try {
-    const { stdout } = await execa(command, args)
-
-    const successMessage = colorize`{success Success:} {dim ${logCommand}}`
-    s.stop(successMessage, 0)
-
-    if (displayOptions.displayCommandResult) {
-      log.info(stdout as string)
+    const result = await callback()
+    if (successMessage) {
+      s.stop(successMessage, 0)
+    } else {
+      s.stop()
+      clearLastLines(2)
     }
-  } catch (error: any) {
-    const errorMessage = colorize`{error Error:} {dim ${logCommand}}`
-    s.stop(errorMessage, 1)
+    return result
+  } catch (error) {
+    if (error instanceof ExecaError) {
+      const errMessage =
+        errorMessage ||
+        colorize`{red Command failed:} {dim.red ${error.escapedCommand}}`
+      s.stop(errMessage, 1)
 
-    if (displayOptions.displayError) {
-      const errorMessage = error.stderr || error.message
-      log.message(errorMessage)
+      if (outputError) {
+        log.message(
+          colors.dim(errorMessage ? error.message : error.originalMessage),
+        )
+      }
+    } else {
+      throw error
     }
-  }
-
-  if (displayOptions.lastCommand) {
-    cancel()
+    process.exit(1)
   }
 }
 
-const getJsonFromCommand = async (command: string, args: string[]) => {
-  const { stdout } = await execa(command, args)
-  return JSON.parse(stdout.toString().trim())
+/**
+ * Display command output
+ */
+async function taskLogCommand(
+  command: string,
+  args: string[] = [],
+  taskLogCompletionOptions: Partial<TaskLogCompletionOptions> = {},
+) {
+  const logCommand = `${command} ${args.join(' ')}`
+  const title = colorize`{blue Executing:} {dim ${logCommand}}`
+
+  const task = taskLog({ title, retainLog: true, spacing: 1 })
+  const completionOptions = { showLog: true, ...taskLogCompletionOptions }
+
+  try {
+    const subprocess = execa(command, args)
+    subprocess.stdout?.on('data', (chunk) => {
+      const striped = stripAnsi(chunk.toString().trim())
+      task.message(wrap(striped))
+    })
+    await subprocess
+    task.success(
+      colorize`{green Executed:} {dim ${logCommand}}`,
+      completionOptions,
+    )
+    return true
+  } catch (error) {
+    if (error instanceof ExecaError) {
+      task.message(wrap(error.stderr || error.originalMessage))
+
+      const message = colorize`{red Command failed:} {dim.red ${error.escapedCommand}}`
+      task.error(message)
+
+      cancel()
+      process.exit(1)
+    }
+  }
 }
 
-export { executeCommand, getJsonFromCommand }
+const regEx = ansiRegex()
+function stripAnsi(string: string) {
+  return string.replace(regEx, '')
+}
+function ansiRegex({ onlyFirst = false } = {}) {
+  // Valid string terminator sequences are BEL, ESC\, and 0x9c
+  const ST = '(?:\\u0007|\\u001B\\u005C|\\u009C)'
+  // OSC sequences only: ESC ] ... ST (non-greedy until the first ST)
+  const osc = `(?:\\u001B\\][\\s\\S]*?${ST})`
+  // CSI and related: ESC/C1, optional intermediates, optional params (supports ; and :) then final byte
+  const csi =
+    '[\\u001B\\u009B][[\\]()#;?]*(?:\\d{1,4}(?:[;:]\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]'
+
+  const pattern = `${osc}|${csi}`
+
+  return new RegExp(pattern, onlyFirst ? undefined : 'g')
+}
+function wrap(text: string): string {
+  const width = process.stdout.columns - 3
+  return text
+    .split('\n') // preserve existing newlines
+    .map((line) => {
+      if (line.length <= width) return line // leave short lines as-is
+
+      // break long lines
+      const chunks: string[] = []
+      let start = 0
+      while (start < line.length) {
+        chunks.push(line.slice(start, start + width))
+        start += width
+      }
+      return chunks.join('\n')
+    })
+    .join('\n')
+}
+
+function outroOrCancel(
+  result: boolean | undefined,
+  success: string | undefined = undefined,
+  errorMessage: string | undefined = undefined,
+) {
+  if (result) {
+    outro(success)
+  } else {
+    cancel(errorMessage)
+  }
+}
+
+export { spinnerCallback, execaCallback, taskLogCommand, outroOrCancel }

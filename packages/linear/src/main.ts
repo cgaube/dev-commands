@@ -3,9 +3,9 @@ import { injectConfigCommands, exitIfInvalid } from '#src/config'
 import { linearViewer } from '#src/clients/linear'
 import { introTitle, colorize, exitWithCancel } from '#common/style'
 import type { User } from '@linear/sdk'
-import { select, spinner, text, group } from '@clack/prompts'
+import { select, spinner, text, group, outro } from '@clack/prompts'
 import v from 'voca'
-import { executeCommand } from '#common/commands'
+import { taskLogCommand } from '#common/commands'
 
 const linear = devCliProgram({
   name: 'linear',
@@ -96,9 +96,8 @@ linear
 
     const branchName = `${groupValues['issueKey']}_${v.kebabCase(groupValues['branchName'] as string)}`
 
-    await executeCommand('git', ['checkout', '-b', branchName], {
-      lastCommand: true,
-    })
+    await taskLogCommand('git', ['checkout', '-b', branchName])
+    outro()
   })
 
 linear.parse()

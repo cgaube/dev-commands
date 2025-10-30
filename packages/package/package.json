@@ -1,21 +1,18 @@
 {
-  "name": "@devcommands/utils",
+  "name": "@devcommands/package",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "bun run ts:check && bun build src/main.ts --outfile dist/utils",
-    "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/utils",
+    "build": "bun run ts:check && bun build src/main.ts --outfile dist/package",
+    "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/package",
     "compile:watch": "bun run compile --watch",
     "ts:check": "tsc --noEmit"
   },
   "dependencies": {
     "@clack/prompts": "^1.0.0-alpha.6",
-    "@types/luxon": "^3.7.1",
     "colorize-template": "^1.0.0",
     "commander": "^14.0.1",
     "execa": "^9.6.0",
-    "figlet": "^1.9.3",
-    "luxon": "^3.7.2",
     "picocolors": "^1.1.1"
   }
 }

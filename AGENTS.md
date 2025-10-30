@@ -40,4 +40,5 @@ When asked to create a new package, follow the instructions above and also look
 at how other packages are created and do things Follow the same structure
 packages/[NAME]/src/main.ts
 
-copy the same packages.json script by changing the name at the right places
+Copy the same packages.json script by changing the name at the right places
+Remember to also copy the tsconfig.json file

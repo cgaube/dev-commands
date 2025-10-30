@@ -1,8 +1,8 @@
 import { devCliProgram } from '#common/devCliProgram'
 import { branchesChoices } from './utils/branches'
-import { cancel, isCancel, spinner, select } from '@clack/prompts'
+import { outro, cancel, isCancel, select } from '@clack/prompts'
 import { color, introTitle } from '#common/style'
-import { executeCommand, getJsonFromCommand } from '#common/commands'
+import { taskLogCommand, execaCallback } from '#common/commands'
 
 const git = devCliProgram({
   name: 'git',
@@ -22,9 +22,8 @@ git
       return cancel('Operation cancelled.')
     }
 
-    await executeCommand('git', ['checkout', branch], {
-      lastCommand: true,
-    })
+    await taskLogCommand('git', ['checkout', branch])
+    outro()
   })
 
 git
@@ -34,20 +33,18 @@ git
     introTitle('Git Checkout from PR branch')
 
     // Fetch all PR info
-    const s = spinner()
-    s.start('Fetching all PR via gh')
-    const prList = await getJsonFromCommand('gh', [
-      'pr',
-      'list',
-      '--json=id,title,author,headRefName',
-    ])
+    const prList = await execaCallback(
+      'gh',
+      ['pr', 'list', '--json=id,title,author,headRefName'],
+      {
+        startMessage: 'Fetching all PR via gh',
+        stopMessage: 'PR list correctly fetched',
+      },
+    ).toJson()
 
     if (prList.length == 0) {
-      s.stop(undefined)
       return cancel('Could not fetch any PR for this repository')
     }
-
-    s.stop('PR list correctly fetched')
 
     const choices = prList.map((pr: any) => {
       return {
@@ -65,9 +62,8 @@ git
       return cancel('Operation cancelled.')
     }
 
-    await executeCommand('git', ['checkout', choice], {
-      lastCommand: true,
-    })
+    await taskLogCommand('git', ['checkout', choice])
+    outro()
   })
 
 git
@@ -81,9 +77,8 @@ git
       return cancel('Operation cancelled.')
     }
 
-    await executeCommand('git', ['branch', '-D', ...selectedBranches], {
-      lastCommand: true,
-    })
+    await taskLogCommand('git', ['branch', '-D', ...selectedBranches])
+    outro()
   })
 
 git.parse()

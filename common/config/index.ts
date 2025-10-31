@@ -201,7 +201,10 @@ export default function setupProgramConfiguration<TSchema extends ConfigSchema>(
           }
         })
 
-        log.info('Configs extracted from:\n ' + overridePaths.join('\n '))
+        log.info(
+          colorize`Config directory located: {dim ${config.getRootDir()}}`,
+        )
+        log.info('Overrides:\n ' + overridePaths.join('\n '))
 
         note(
           JSON.stringify(await config.getAll(), null, 2),

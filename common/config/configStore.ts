@@ -13,7 +13,7 @@ type ConfigData = Record<string, ConfigValue>
 export class ConfigStore {
   public readonly program: string
   public readonly configSchema: ConfigSchema
-  private readonly allConfigDir: string
+  private readonly rootDir: string
   private readonly configDir: string
   private readonly data: ConfigData = {}
 
@@ -22,7 +22,12 @@ export class ConfigStore {
     dir: string = process.cwd(),
     configSchema: ConfigSchema = {},
   ) {
-    this.allConfigDir = join(homedir(), '.devcommands-config', program)
+    this.rootDir = join(
+      process.env.HOMEBREW_PREFIX || '/opt/homebrew',
+      'etc',
+      'devcommands-config',
+      program,
+    )
     this.configDir = dir
     this.program = program
 
@@ -30,9 +35,13 @@ export class ConfigStore {
     this.setDefaults()
   }
 
+  getRootDir(): string {
+    return this.rootDir
+  }
+
   // Make sure the configuration store has all the required values
   isValid(strict: boolean = false) {
-    if (strict && !existsSync(this.allConfigDir)) {
+    if (strict && !existsSync(this.rootDir)) {
       return false
     }
 
@@ -116,7 +125,7 @@ export class ConfigStore {
     })
 
     // Recursively delete folder
-    await rm(this.allConfigDir, { recursive: true, force: true })
+    await rm(this.rootDir, { recursive: true, force: true })
   }
 
   async saveConfig(values: ConfigData) {
@@ -147,7 +156,7 @@ export class ConfigStore {
   }
 
   private configFileForDir(dir: string) {
-    return file(join(this.allConfigDir, `${this.hashPath(dir)}.json`))
+    return file(join(this.rootDir, `${this.hashPath(dir)}.json`))
   }
 
   // Loop values to set secret based on configSchema
@@ -199,16 +208,16 @@ export class ConfigStore {
 
   // Return ALL configuration values for the entire program (not folder specific)
   private async getProgramConfigs(): Promise<ConfigData[]> {
-    if (!existsSync(this.allConfigDir)) {
+    if (!existsSync(this.rootDir)) {
       return []
     }
 
-    const allFiles = await readdir(this.allConfigDir, { recursive: false })
+    const allFiles = await readdir(this.rootDir, { recursive: false })
     const jsonFiles = allFiles.filter((f) => f.endsWith('.json'))
 
     const values: ConfigData[] = await Promise.all(
       jsonFiles.map(async (fileName) => {
-        const jsonContent = await file(join(this.allConfigDir, fileName)).json()
+        const jsonContent = await file(join(this.rootDir, fileName)).json()
         return jsonContent
       }),
     )

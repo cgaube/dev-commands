@@ -20,11 +20,8 @@ export default function setupProgramConfiguration<TSchema extends ConfigSchema>(
   programName: string,
   configSchema: TSchema,
 ) {
-  const buildConfigStore = async (dir: string = process.cwd()) => {
-    const store = new ConfigStore(programName, dir, configSchema)
-    await store.loadData()
-    return store
-  }
+  const buildConfigStore = async (dir: string = process.cwd()) =>
+    ConfigStore.create(programName, dir, configSchema)
 
   let configStore: ConfigStore | undefined = undefined
   const getConfigStore = async () => {
@@ -72,14 +69,17 @@ export default function setupProgramConfiguration<TSchema extends ConfigSchema>(
         outro(colorize`Configuration saved in {dim ${configFile}}`)
       })
 
-    configCommand
+    const overrides = configCommand
       .command('override')
-      .alias('set')
+      .description('override application configuration')
+
+    overrides
+      .command('set')
       .argument(
         '[name]',
-        'The config to override, Leave empty for interactively pick configs',
+        'the config to override, leave empty for interactively pick configs',
       )
-      .description('override application configuration')
+      .description('set directory level overrides')
       .action(async (name) => {
         introTitle(`Override configuration for ${program.name()}`)
         const configStore = await getConfigStore()
@@ -95,6 +95,8 @@ export default function setupProgramConfiguration<TSchema extends ConfigSchema>(
             'You can only override configurations in the subdirectories of your home folder',
           )
         }
+
+        log.info(`Override for directory ${currentDir}`)
 
         const currentOverrides = await configStore.getOverrides()
         if (currentOverrides) {
@@ -146,12 +148,32 @@ export default function setupProgramConfiguration<TSchema extends ConfigSchema>(
             title: 'Saving overrides files',
             task: async () => {
               const file = await configStore.saveConfig(result)
-              return colorize`Configuration saved in {dim ${file}}`
+              return colorize`Overrides saved in {dim ${file}}`
             },
           },
         ])
 
         outro()
+      })
+
+    overrides
+      .command('clear')
+      .description('clear directory level overrides')
+      .action(async () => {
+        introTitle('Clear override configuration file')
+        const configStore = await getConfigStore()
+        await exitIfInvalid(true)
+
+        const choice = await confirm({
+          message: colorize`Do you really want to delete overrides for this folder? {bold.yellow This cannot be undone}`,
+        })
+
+        if (choice !== true) {
+          return cancel('Operation cancelled.')
+        }
+
+        await configStore.clearOverrideFile()
+        outro('Override configuration cleared')
       })
 
     // Clear command
@@ -164,7 +186,7 @@ export default function setupProgramConfiguration<TSchema extends ConfigSchema>(
         const config = await getConfigStore()
 
         const choice = await confirm({
-          message: colorize`Are you sure you want to delete all configuration files ? {bold.yellow This cannot be undone}`,
+          message: colorize`Do you really want to delete {bold.blue all} configuration files? {bold.yellow This cannot be undone}`,
         })
 
         if (choice == true) {
@@ -172,7 +194,7 @@ export default function setupProgramConfiguration<TSchema extends ConfigSchema>(
             {
               title: 'Clearing config files',
               task: async () => {
-                await config.clearFiles()
+                await config.clearAllProgramFiles()
               },
             },
           ])
@@ -243,10 +265,12 @@ export default function setupProgramConfiguration<TSchema extends ConfigSchema>(
           message += ` ${colorize`{yellow Secret}`}`
         }
 
+        const currentValue = await configStore.get(key)
+
         // Todo if options specified use select, if default value is array use multiselect
         return text({
           message,
-          initialValue: await configStore.get(key),
+          initialValue: currentValue,
           // Require value
           validate(value) {
             if (configSetting.required && (value || '').length === 0)

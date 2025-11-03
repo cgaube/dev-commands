@@ -1,7 +1,6 @@
 import { existsSync } from 'node:fs'
-import { dirname } from 'node:path'
 import { secrets, file } from 'bun'
-import { join } from 'path'
+import { join, dirname } from 'path'
 import { homedir } from 'os'
 import { ConfigSchema } from './types'
 import { createHash } from 'crypto'
@@ -17,7 +16,18 @@ export class ConfigStore {
   private readonly configDir: string
   private readonly data: ConfigData = {}
 
-  constructor(
+  // Async factory to load all configs files
+  static async create(
+    program: string,
+    dir: string = process.cwd(),
+    configSchema: ConfigSchema = {},
+  ) {
+    const instance = new ConfigStore(program, dir, configSchema)
+    await instance.loadData()
+    return instance
+  }
+
+  private constructor(
     program: string,
     dir: string = process.cwd(),
     configSchema: ConfigSchema = {},
@@ -108,21 +118,30 @@ export class ConfigStore {
     const all = await this.getConfigs()
     return all[this.configDir]
   }
-  /**
-   * Clear all the files and their secrets
-   * - need to fetch all configs so we can delete the secrets
-   * - then we just delete the directory
-   */
-  async clearFiles() {
-    const allConfigs = await this.getProgramConfigs()
 
-    allConfigs.forEach((configs) => {
-      Object.values(configs).map(async (value) => {
-        if (this.isSecret(value)) {
-          return await secrets.delete(value)
-        }
-      })
-    })
+  /**
+   * Clear all override stored in the current configuration directory.
+   * This method deletes the configuration file specific to the current
+   * directory, effectively removing any overrides set for it.
+   */
+  async clearOverrideFile() {
+    const folderFile = this.configFileForDir(this.configDir)
+
+    if (await folderFile.exists()) {
+      return folderFile.delete()
+    }
+  }
+
+  /**
+   * Clears all configuration files and their associated secrets for the program.
+   * It fetches all configurations to identify and delete any stored secrets
+   * before removing the configuration directory itself.
+   */
+  async clearAllProgramFiles() {
+    const files = await this.getAllProgramConfigsFiles()
+
+    // Delete all secrets associated with each file
+    await Promise.all(files.map((filePath) => this.clearFile(filePath)))
 
     // Recursively delete folder
     await rm(this.rootDir, { recursive: true, force: true })
@@ -159,7 +178,9 @@ export class ConfigStore {
     return file(join(this.rootDir, `${this.hashPath(dir)}.json`))
   }
 
-  // Loop values to set secret based on configSchema
+  /**
+   * Loop values to set secret based on configSchema
+   */
   private async normalizeValues(values: ConfigData) {
     return Promise.all(
       Object.entries(values).map(async ([key, value]) => [
@@ -202,25 +223,38 @@ export class ConfigStore {
     return value.type === 'secret'
   }
 
+  private async deleteSecret(value: ConfigValue) {
+    if (this.isSecret(value)) {
+      return await secrets.delete(value)
+    }
+  }
+
   private hashPath = (path: string) => {
     return createHash('sha1').update(path).digest('hex')
   }
 
-  // Return ALL configuration values for the entire program (not folder specific)
-  private async getProgramConfigs(): Promise<ConfigData[]> {
+  /**
+   * Clear one file
+   * This also mean deleting all secrets associated with the keys in the file as well
+   */
+  private async clearFile(filePath: string): Promise<void> {
+    const jsonContent: Record<string, ConfigValue> = await file(filePath).json()
+    await Promise.all(
+      Object.values(jsonContent).map((value) => this.deleteSecret(value)),
+    )
+  }
+
+  /**
+   * Fetch all the json config files for the current program
+   */
+  private async getAllProgramConfigsFiles() {
     if (!existsSync(this.rootDir)) {
       return []
     }
 
     const allFiles = await readdir(this.rootDir, { recursive: false })
-    const jsonFiles = allFiles.filter((f) => f.endsWith('.json'))
-
-    const values: ConfigData[] = await Promise.all(
-      jsonFiles.map(async (fileName) => {
-        const jsonContent = await file(join(this.rootDir, fileName)).json()
-        return jsonContent
-      }),
-    )
-    return values
+    return allFiles
+      .filter((f) => f.endsWith('.json'))
+      .map((filePath) => join(this.rootDir, filePath))
   }
 }

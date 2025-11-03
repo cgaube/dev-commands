@@ -12,8 +12,8 @@ export function devCliProgram({ name, summary }: Params) {
   program
     .name(name)
     .summary(summary)
-    .option('--summary', 'Display a summary of the command')
-    .option('--complete', 'Output list of shell-completions for <input>')
+    .option('--summary', 'display a summary of the command')
+    .option('--complete', 'output list of shell-completions for <input>')
     .argument('[optionalArgs...]')
     .action((optionalArgs, options) => {
       if (options.summary) {

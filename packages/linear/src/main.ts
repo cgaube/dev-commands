@@ -18,7 +18,7 @@ injectConfigCommands(linear)
 linear
   .command('start')
   .alias('branch')
-  .description('Start a git branch based on a linear issue')
+  .description('start a git branch based on a linear issue')
   .option('--team <teams...>', 'override teams to filter issues by')
   .option('--label <labels...>', 'override labels to filter issues by')
   .option('--state <states...>', 'override statuses to filter issues by', [

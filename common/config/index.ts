@@ -44,12 +44,12 @@ export default function setupProgramConfiguration<TSchema extends ConfigSchema>(
   const injectConfigCommands = (program: Command) => {
     const configCommand = program
       .command('config')
-      .description('manage application configuration')
+      .description('manage configuration')
 
     // Initialize dev-command configuration based on the ConfigSchema
     configCommand
       .command('init')
-      .description('initialize application configuration')
+      .description('initialize configuration')
       .action(async () => {
         // use config to build a clack group of question
         introTitle(`Configure ${program.name()}`)
@@ -71,7 +71,7 @@ export default function setupProgramConfiguration<TSchema extends ConfigSchema>(
 
     const overrides = configCommand
       .command('override')
-      .description('override application configuration')
+      .description('override configuration')
 
     overrides
       .command('set')

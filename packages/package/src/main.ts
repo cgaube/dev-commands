@@ -20,7 +20,7 @@ const pkg = devCliProgram({
 pkg
   .command('install <package>')
   .alias('add')
-  .description(`Install a package from the ${tap} tap`)
+  .description(`install a package from the ${tap} tap`)
   .action(async (packageName: string) => {
     introTitle('Install Package')
 
@@ -41,7 +41,7 @@ pkg
 pkg
   .command('uninstall <package>')
   .alias('remove')
-  .description('Uninstall a package from the cgaube/devcommands tap')
+  .description('uninstall a package from the cgaube/devcommands tap')
   .action(async (packageName: string) => {
     introTitle('Uninstall Package')
 
@@ -58,7 +58,7 @@ pkg
 
 pkg
   .command('list')
-  .description('List all available packages from the cgaube/devcommands tap')
+  .description('list all available packages from the cgaube/devcommands tap')
   .action(async () => {
     introTitle('Available Packages')
 

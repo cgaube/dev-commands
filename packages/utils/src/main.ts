@@ -14,7 +14,7 @@ const utils = devCliProgram({
 
 utils
   .command('stay-awake')
-  .description('Prevents the system from sleeping for a specified duration')
+  .description('prevents the system from sleeping for a specified duration')
   .option(
     '-t, --time <seconds>',
     'The duration in seconds to stay awake',
@@ -60,7 +60,7 @@ utils
 
 utils
   .command('port')
-  .description('Lists applications listening on a specific port')
+  .description('lists applications listening on a specific port')
   .argument('<port>', 'The port number to listen on')
   .action(async (port) => {
     introTitle('Port Listeners')

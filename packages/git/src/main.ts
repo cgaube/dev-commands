@@ -13,7 +13,7 @@ const git = devCliProgram({
 git
   .command('checkout')
   .alias('switch')
-  .description('Better checkout experience')
+  .description('switch to a branch with enhanced UX')
   .action(async () => {
     introTitle('Git Checkout')
 
@@ -28,7 +28,7 @@ git
 
 git
   .command('pr')
-  .description('Checkout a PR branch')
+  .description('checkout a branch from a pull request')
   .action(async () => {
     introTitle('Git Checkout from PR branch')
 
@@ -69,7 +69,7 @@ git
 
 git
   .command('cleanup')
-  .description('Select branch to delete')
+  .description('select branches to delete')
   .action(async () => {
     introTitle('Delete branches')
 

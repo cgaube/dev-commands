@@ -37,4 +37,4 @@ jobs:
 
           # Commit and push changes to tap repository
           git commit -a -m "chore: update formulas to latest main"
-          git push
+          git push "https://x-access-token:${GH_TOKEN}@github.com/cgaube/homebrew-devcommands.git" main

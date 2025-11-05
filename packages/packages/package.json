@@ -1,10 +1,10 @@
 {
-  "name": "@devcommands/package",
+  "name": "@devcommands/packages",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "bun run ts:check && bun build src/main.ts --outfile dist/package",
-    "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/package",
+    "build": "bun run ts:check && bun build src/main.ts --outfile dist/packages",
+    "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/packages",
     "compile:watch": "bun run compile --watch",
     "ts:check": "tsc --noEmit"
   },

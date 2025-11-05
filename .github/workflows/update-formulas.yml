@@ -2,6 +2,7 @@ name: Update DevCommands Homebrew Formulas
 
 # Automatically updates Homebrew formulas in the tap repository
 # whenever changes are pushed to the main branch
+# This is working for personal taps only and should probably be moved to a release approach later
 on:
   push:
     branches: [main]
@@ -9,9 +10,7 @@ on:
 jobs:
   update-formulas:
     runs-on: ubuntu-latest
-    env:
-      # Personal Access Token with repo permissions to push to the tap repository
-      GH_TOKEN: ${{ secrets.PERSONAL_PAT }}
+
     steps:
       - name: Checkout homebrew-devcommands
         uses: actions/checkout@v5
@@ -27,15 +26,18 @@ jobs:
       - name: Update formulas
         run: |
           # Update all devcommand formula files
+          # Generate version string: vYYYY.M.D-timestamp
+          # Example: 2024.1.15-1705334400
+          NEW_VERSION="$(date +%Y.%-m.%-d)-$(date +%s)"
+
+          echo "New version: $NEW_VERSION"
+
           for f in devcommand-*.rb; do
-            # Generate version string: vYYYY.M.D-timestamp
-            # Example: 2024.1.15-1705334400
-            NEW_VERSION="$(date +%Y.%-m.%-d)-$(date +%s)"
             sed -i "s/^  version .*/  version \"$NEW_VERSION\"/" "$f"
           done
 
           git status
 
           # Commit and push changes to tap repository
-          git commit -a -m "chore: update formulas to latest main"
+          git commit -a -m "chore: update formulas to latest main version $NEW_VERSION"
           git push

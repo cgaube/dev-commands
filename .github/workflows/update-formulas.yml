@@ -26,4 +26,16 @@ jobs:
 
       - name: Update formulas
         run: |
-          ls -al
+          # Update all devcommand formula files
+          for f in devcommand-*.rb; do
+            # Generate version string: vYYYY.M.D-timestamp
+            # Example: 2024.1.15-1705334400
+            NEW_VERSION="$(date +%Y.%-m.%-d)-$(date +%s)"
+            sed -i "s/^  version .*/  version \"$NEW_VERSION\"/" "$f"
+          done
+
+          git status
+
+          # Commit and push changes to tap repository
+          git commit -a -m "chore: update formulas to latest main"
+          git push

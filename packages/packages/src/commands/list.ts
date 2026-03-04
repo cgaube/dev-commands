@@ -7,6 +7,7 @@ import { tapName } from '#src/constants'
 
 export function createListCommand() {
   return new Command('list')
+    .alias('ls')
     .description(`list all available packages from the ${tapName} tap`)
     .action(async () => {
       introTitle('Available Packages')

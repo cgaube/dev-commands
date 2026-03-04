@@ -1,0 +1,7 @@
+import { Command } from 'commander' import { createSubCommand } from
+'./commands/subCommand' const program = new Command() .name('{{packageName}}')
+.summary('A CLI tool for
+{{packageName}}') .option('--summary', 'display a summary of the command')
+.argument('[optionalArgs...]') .action((optionalArgs, options) => { if
+(options.summary) { console.log(program.summary()) return } program.help() } )
+program.addCommand(createSubCommand()) program.parse()

@@ -2,6 +2,7 @@ import { execaSync } from 'execa'
 import { Glob } from 'bun'
 import { readFileSync } from 'fs'
 import { basename } from 'path'
+import { tapName } from '#src/constants'
 
 type FormulaDesc = {
   desc: string | null
@@ -10,15 +11,12 @@ type FormulaDesc = {
 
 export function getFormulas() {
   // Get all .rb files in the tap folder
-  const repoPath = execaSync('brew', [
-    '--repository',
-    'cgaube/devcommands',
-  ]).stdout.trim()
+  const repoPath = execaSync('brew', ['--repository', tapName]).stdout.trim()
   const glob = new Glob(`${repoPath}/devcommand-*.rb`)
 
   const formulas = new Map<string, FormulaDesc>()
 
-  // Check the one that are installed
+  // Check the one that is installed
   const output = execaSync('brew', ['list', '--formula']).stdout.trim()
   const installed = output
     .split(/\s+/)

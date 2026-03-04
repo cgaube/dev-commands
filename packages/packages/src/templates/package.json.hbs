@@ -1,0 +1,6 @@
+{ "name": "{{packageName}}", "version": "0.0.0", "type": "module",
+"packageManager": "bun", "scripts": { "compile": "bun run ts:check && bun build
+src/main.ts --compress --compile --outfile
+{{outputDir}}/{{packageName}}", "compile:watch": "bun run compile --watch",
+"ts:check": "tsc --noEmit" }, "dependencies": { "commander": "^14.0.1",
+"typescript": "^5.9.3", } }

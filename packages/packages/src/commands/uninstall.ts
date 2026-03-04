@@ -4,8 +4,9 @@ import { tapName } from '#src/constants'
 import { taskLogCommand, outroOrCancel } from '#common/commands'
 
 export function createUninstallCommand() {
-  return new Command('uninstall <package>')
+  return new Command('uninstall')
     .alias('remove')
+    .argument('<package>', 'package to uninstall')
     .description(`uninstall a package from the ${tapName} tap`)
     .action(async (packageName: string) => {
       introTitle('Uninstall Package')

@@ -4,7 +4,8 @@ import { tapName } from '#src/constants'
 import { taskLogCommand, outroOrCancel, execaCallback } from '#common/commands'
 
 export function createInstallCommand() {
-  return new Command('install <package>')
+  return new Command('install')
+    .argument('<package>', 'package to install')
     .alias('add')
     .description(`install a package from the ${tapName} tap`)
     .action(async (packageName: string) => {

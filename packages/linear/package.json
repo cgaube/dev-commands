@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.0.0-alpha.6",
-    "@linear/sdk": "^61.0.0",
+    "@linear/sdk": "^76.0.0",
     "@types/voca": "^1.4.6",
     "colorize-template": "^1.0.0",
     "commander": "^14.0.1",

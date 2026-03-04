@@ -1,12 +1,5 @@
-import {
-  cancel,
-  log,
-  spinner,
-  SpinnerOptions,
-  taskLog,
-  outro,
-  TaskLogCompletionOptions,
-} from '@clack/prompts'
+import { cancel, log, spinner, taskLog, outro } from '@clack/prompts'
+import type { SpinnerOptions, TaskLogCompletionOptions } from '@clack/prompts'
 import { execa, ExecaError } from 'execa'
 import { colors, colorize } from './style'
 import { clearLine, moveCursor } from 'readline'
@@ -71,7 +64,7 @@ async function spinnerCallback<T = any>(
   try {
     const result = await callback()
     if (successMessage) {
-      s.stop(successMessage, 0)
+      s.stop(successMessage)
     } else {
       s.stop()
       clearLastLines(2)
@@ -82,7 +75,7 @@ async function spinnerCallback<T = any>(
       const errMessage =
         errorMessage ||
         colorize`{red Command failed:} {dim.red ${error.escapedCommand}}`
-      s.stop(errMessage, 1)
+      s.error(errMessage)
 
       if (outputError) {
         log.message(

@@ -6,7 +6,7 @@ import { taskLogCommand, outroOrCancel } from '#common/commands'
 export function createUninstallCommand() {
   return new Command('uninstall <package>')
     .alias('remove')
-    .description('uninstall a package from the cgaube/devcommands tap')
+    .description(`uninstall a package from the ${tapName} tap`)
     .action(async (packageName: string) => {
       introTitle('Uninstall Package')
 

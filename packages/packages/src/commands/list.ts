@@ -3,10 +3,11 @@ import { log, cancel, outro } from '@clack/prompts'
 import { colorize, introTitle } from '#common/style'
 import { getFormulas } from '#src/utils/formulas'
 import { spinnerCallback } from '#common/commands'
+import { tapName } from '#src/constants'
 
 export function createListCommand() {
   return new Command('list')
-    .description('list all available packages from the cgaube/devcommands tap')
+    .description(`list all available packages from the ${tapName} tap`)
     .action(async () => {
       introTitle('Available Packages')
 

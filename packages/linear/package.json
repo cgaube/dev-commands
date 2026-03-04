@@ -10,7 +10,7 @@
     "ts:check": "tsc --noEmit"
   },
   "dependencies": {
-    "@clack/prompts": "^1.0.0-alpha.6",
+    "@clack/prompts": "^1.1.0",
     "@linear/sdk": "^76.0.0",
     "@types/voca": "^1.4.6",
     "colorize-template": "^1.0.0",

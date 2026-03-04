@@ -18,7 +18,7 @@ export function getFormulas() {
 
   const formulas = new Map<string, FormulaDesc>()
 
-  // Check the one that are installed
+  // Check the one that is installed
   const output = execaSync('brew', ['list', '--formula']).stdout.trim()
   const installed = output
     .split(/\s+/)

@@ -17,27 +17,103 @@ jobs:
         with:
           repository: cgaube/homebrew-devcommands
           token: ${{ secrets.PERSONAL_PAT }}
+          path: tap
 
       - name: Set up git user
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
 
-      - name: Update formulas
+      - name: Detect formulas to update
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
         run: |
-          # Update all devcommand formula files
-          # Generate version string: vYYYY.M.D-timestamp
+          set -euo pipefail
+
+          echo "Detecting changed formulas from $BEFORE_SHA to $AFTER_SHA via GitHub API"
+          if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            API_PATH="commits/$AFTER_SHA"
+          else
+            API_PATH="compare/$BEFORE_SHA...$AFTER_SHA"
+          fi
+
+          CHANGED_FILES="$(
+            gh api --paginate "repos/$REPO/$API_PATH" --jq '.files[].filename' \
+              | sort -u
+          )"
+
+          UPDATE_ALL=false
+          declare -A FORMULA_SET=()
+
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+
+            case "$file" in
+              common/*|package.json|bun.lockb|tsconfig.json)
+                UPDATE_ALL=true
+                break
+                ;;
+              packages/*/*)
+                pkg="${file#packages/}"
+                pkg="${pkg%%/*}"
+                formula_file="devcommand-${pkg}.rb"
+                if [ -f "tap/$formula_file" ]; then
+                  FORMULA_SET["$formula_file"]=1
+                fi
+                ;;
+            esac
+          done <<< "$CHANGED_FILES"
+
+          if [ "$UPDATE_ALL" = true ]; then
+            FORMULA_FILES="$(
+              cd tap
+              shopt -s nullglob
+              formulas=(devcommand-*.rb)
+              printf '%s\n' "${formulas[@]}" | xargs
+            )"
+          else
+            FORMULA_FILES="$(
+              printf '%s\n' "${!FORMULA_SET[@]}" \
+                | sort \
+                | xargs
+            )"
+          fi
+
+          if [ -z "$FORMULA_FILES" ]; then
+            echo "No package formula updates required."
+            echo "should_update=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Formulas to update: $FORMULA_FILES"
+            echo "should_update=true" >> "$GITHUB_OUTPUT"
+            echo "formula_files=$FORMULA_FILES" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update formulas
+        if: steps.detect.outputs.should_update == 'true'
+        run: |
+          set -euo pipefail
+          cd tap
+
+          # Generate version string: YYYY.M.D-timestamp
           # Example: 2024.1.15-1705334400
           NEW_VERSION="$(date +%Y.%-m.%-d)-$(date +%s)"
-
           echo "New version: $NEW_VERSION"
 
-          for f in devcommand-*.rb; do
+          for f in ${{ steps.detect.outputs.formula_files }}; do
             sed -i "s/^  version .*/  version \"$NEW_VERSION\"/" "$f"
           done
 
           git status
 
           # Commit and push changes to tap repository
+          if git diff --quiet; then
+            echo "No formula version changes to commit."
+            exit 0
+          fi
+
           git commit -a -m "chore: update formulas to latest main version $NEW_VERSION"
           git push

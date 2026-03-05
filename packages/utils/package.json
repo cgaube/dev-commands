@@ -16,6 +16,7 @@
     "execa": "^9.6.0",
     "figlet": "^1.10.0",
     "luxon": "^3.7.2",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "simplex-noise": "^4.0.3"
   }
 }

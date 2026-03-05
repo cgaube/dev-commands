@@ -19,15 +19,25 @@ utils
     'The duration in seconds to stay awake',
     '2628000',
   )
+  .option(
+    '--animation-timeout <seconds>',
+    'How long to animate before freezing the last frame (0 disables timeout)',
+    '60',
+  )
   .option('--no-animation', 'Do not show animated orb', true)
   .action(async (options) => {
     const useAnimation = options.animation === true
+    let terminalActive = false
+    const animationTimeoutSeconds = Number(options.animationTimeout)
+    const shouldAutoStopAnimation =
+      Number.isFinite(animationTimeoutSeconds) && animationTimeoutSeconds > 0
 
     if (useAnimation) {
       process.stdout.write('\x1b[?1049h')
       process.stdout.write('\x1b[?2026h')
       process.stdout.write('\x1b[2J\x1b[0;0H')
       process.stdout.write('\x1b[?25l')
+      terminalActive = true
     }
 
     const duration = Duration.fromObject({ seconds: options.time }).shiftTo(
@@ -37,7 +47,16 @@ utils
 
     const start = Date.now()
     const orb = useAnimation ? new OrbAnimation() : null
-    const { rows } = process.stdout
+    let animationStopTimer: ReturnType<typeof setTimeout> | null = null
+
+    const cleanupTerminal = () => {
+      if (!terminalActive) return
+      process.stdout.write('\x1b[?25h')
+      process.stdout.write('\x1b[?2026l')
+      process.stdout.write('\x1b[?1049l')
+      process.stdout.write('\x1b[0;0H')
+      terminalActive = false
+    }
 
     let stayAwakeDescription = '\n\n\n'
     stayAwakeDescription += '\x1b[1;32m'
@@ -54,11 +73,7 @@ utils
       process.stdout.write(output)
     } else {
       orb!.start(() => {
-        const elapsed = Date.now() - start
-        // Automatically stop after 1 minute
-        if (elapsed > 60000) {
-          orb!.stop()
-        }
+        const rows = process.stdout.rows || 24
 
         const orbFrame = orb!.getFrame()
         const orbLines = orbFrame.split('\n')
@@ -83,22 +98,26 @@ utils
 
         process.stdout.write(output)
       })
+
+      if (shouldAutoStopAnimation) {
+        animationStopTimer = setTimeout(() => {
+          orb!.stop()
+        }, animationTimeoutSeconds * 1000)
+      }
     }
 
     const caffeinate = execa('caffeinate', ['-disu', '-t', options.time], {
       stdio: 'inherit',
     })
 
-    process.on('SIGINT', () => {
+    const sigintHandler = () => {
       if (orb) orb.stop()
-      process.stdout.write('\x1b[?25h')
-      process.stdout.write('\x1b[?1049l')
-      process.stdout.write('\x1b[0;0H')
+      cleanupTerminal()
 
       readline.cursorTo(process.stdout, 0)
       readline.clearLine(process.stdout, 0)
 
-      const finalElapsed = Math.floor((Date.now() - Date.now()) / 1000)
+      const finalElapsed = Math.floor((Date.now() - start) / 1000)
       const awakeFor = Duration.fromObject({ seconds: finalElapsed })
       log.info(
         `Was kept awake for ${awakeFor.toHuman({ unitDisplay: 'short' })}`,
@@ -106,13 +125,16 @@ utils
       outro('Go to bed! 😴')
       caffeinate.kill('SIGINT')
       process.exit(0)
-    })
+    }
+    process.on('SIGINT', sigintHandler)
 
     try {
       await caffeinate
     } finally {
+      process.off('SIGINT', sigintHandler)
+      if (animationStopTimer) clearTimeout(animationStopTimer)
       if (orb) orb.stop()
-      if (useAnimation) process.stdout.write('\x1b[?25h')
+      cleanupTerminal()
     }
   })
 

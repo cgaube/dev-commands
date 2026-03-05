@@ -1,5 +1,14 @@
 import { generatePulseFrame } from './orb-frames'
 
+const FRAME_COUNT = 48
+const FRAME_CYCLES = 4
+const FRAME_INTERVAL_MS = 180
+const ORB_WIDTH_RATIO = 0.35
+const ORB_HEIGHT_RATIO = 0.5
+const MIN_ORB_WIDTH = 20
+const MIN_ORB_HEIGHT = 8
+const MAX_ORB_HEIGHT = 30
+
 function getTerminalSize() {
   const cols = process.stdout.columns || 80
   const rows = process.stdout.rows || 24
@@ -7,8 +16,11 @@ function getTerminalSize() {
 }
 
 function getOrbSize(cols: number, rows: number) {
-  const width = Math.floor(cols * 0.35)
-  const height = Math.min(30, Math.floor(rows * 0.5))
+  const width = Math.max(MIN_ORB_WIDTH, Math.floor(cols * ORB_WIDTH_RATIO))
+  const height = Math.max(
+    MIN_ORB_HEIGHT,
+    Math.min(MAX_ORB_HEIGHT, Math.floor(rows * ORB_HEIGHT_RATIO)),
+  )
   return { width, height }
 }
 
@@ -18,25 +30,28 @@ export class OrbAnimation {
   private frame = ''
 
   start(callback: () => void) {
-    const { cols, rows } = getTerminalSize()
-    const { width, height } = getOrbSize(cols, rows)
+    this.stop()
+    this.frameIndex = 0
 
-    const generateFrame = (index: number) => {
-      const t = (index / 48) * Math.PI * 4
+    const generateFrame = (index: number, cols: number, rows: number) => {
+      const { width, height } = getOrbSize(cols, rows)
+      const t = ((index % FRAME_COUNT) / FRAME_COUNT) * Math.PI * FRAME_CYCLES
       const rawFrame = generatePulseFrame(t, width, height)
       const padding = Math.max(0, Math.floor((cols - width) / 2))
+      const horizontalPadding = ' '.repeat(padding)
       const lines = rawFrame.split('\n')
-      return lines.map((line) => ' '.repeat(padding) + line).join('\n')
+      return lines.map((line) => horizontalPadding + line).join('\n')
     }
 
     const update = () => {
-      this.frame = generateFrame(this.frameIndex)
+      const { cols, rows } = getTerminalSize()
+      this.frame = generateFrame(this.frameIndex, cols, rows)
       this.frameIndex++
       callback()
     }
 
     update()
-    this.interval = setInterval(update, 180)
+    this.interval = setInterval(update, FRAME_INTERVAL_MS)
   }
 
   stop() {
@@ -54,9 +69,10 @@ export class OrbAnimation {
 export function generateOrb(time: number): string {
   const { cols, rows } = getTerminalSize()
   const { width, height } = getOrbSize(cols, rows)
-  const t = ((time * 10) / 48) * Math.PI * 4
+  const t = ((time * 10) / FRAME_COUNT) * Math.PI * FRAME_CYCLES
   const rawFrame = generatePulseFrame(t, width, height)
   const padding = Math.max(0, Math.floor((cols - width) / 2))
+  const horizontalPadding = ' '.repeat(padding)
   const lines = rawFrame.split('\n')
-  return lines.map((line) => ' '.repeat(padding) + line).join('\n')
+  return lines.map((line) => horizontalPadding + line).join('\n')
 }

@@ -1,4 +1,5 @@
 import { auroraIntensity } from './styles/aurora'
+import { crownFlareIntensity } from './styles/crown-flare'
 import { haloIntensity } from './styles/halo'
 import { plasmaIntensity } from './styles/plasma'
 import { rollingEyeIntensity } from './styles/rolling-eye'
@@ -26,6 +27,7 @@ export const ORB_STYLES = [
   'rolling-eye',
   'storm-core',
   'starfield',
+  'crown-flare',
   'halo',
   'aurora',
 ] as const
@@ -36,6 +38,7 @@ const STYLE_INTENSITY_MAP: Record<OrbStyle, StyleIntensityFn> = {
   'rolling-eye': rollingEyeIntensity,
   'storm-core': stormCoreIntensity,
   starfield: starfieldIntensity,
+  'crown-flare': crownFlareIntensity,
   halo: haloIntensity,
   aurora: auroraIntensity,
 }

@@ -4,7 +4,13 @@ import { introTitle } from '#common/style'
 import { execa } from 'execa'
 import { Duration } from 'luxon'
 import readline from 'readline'
-import { OrbAnimation } from './orb'
+import {
+  isOrbStyle,
+  ORB_STYLES,
+  OrbAnimation,
+  pickRandomOrbStyle,
+  type OrbStyle,
+} from './animation/orb-animation'
 
 const utils = devCliProgram({
   name: 'utils',
@@ -24,6 +30,10 @@ utils
     'How long to animate before freezing the last frame (0 disables timeout)',
     '60',
   )
+  .option(
+    '--animation-style <style>',
+    `Animation style: ${ORB_STYLES.join(', ')} (default: random)`,
+  )
   .option('--no-animation', 'Do not show animated orb', true)
   .action(async (options) => {
     const useAnimation = options.animation === true
@@ -31,6 +41,19 @@ utils
     const animationTimeoutSeconds = Number(options.animationTimeout)
     const shouldAutoStopAnimation =
       Number.isFinite(animationTimeoutSeconds) && animationTimeoutSeconds > 0
+    const selectedStyle = options.animationStyle
+      ? String(options.animationStyle).trim()
+      : ''
+    const hasSelectedStyle = selectedStyle.length > 0
+    const animationStyle: OrbStyle = hasSelectedStyle
+      ? isOrbStyle(selectedStyle)
+        ? selectedStyle
+        : pickRandomOrbStyle()
+      : pickRandomOrbStyle()
+
+    if (hasSelectedStyle && !isOrbStyle(selectedStyle)) {
+      log.warning(`Unknown animation style "${selectedStyle}". Using random style.`)
+    }
 
     if (useAnimation) {
       process.stdout.write('\x1b[?1049h')
@@ -46,7 +69,7 @@ utils
     )
 
     const start = Date.now()
-    const orb = useAnimation ? new OrbAnimation() : null
+    const orb = useAnimation ? new OrbAnimation(animationStyle) : null
     let animationStopTimer: ReturnType<typeof setTimeout> | null = null
 
     const cleanupTerminal = () => {
@@ -58,45 +81,51 @@ utils
       terminalActive = false
     }
 
-    let stayAwakeDescription = '\n\n\n'
-    stayAwakeDescription += '\x1b[1;32m'
-    stayAwakeDescription += ' STAY AWAKE\n'
-    stayAwakeDescription += ' ================\n'
-    stayAwakeDescription += '\x1b[0m'
-    stayAwakeDescription += ` Duration: ${duration.toHuman()}\n\n`
-    stayAwakeDescription += `\x1b[2m Press Ctrl+C to cancel\x1b[0m`
+    const statusLines = [
+      '\x1b[1;32m STAY AWAKE\x1b[0m',
+      '\x1b[1;32m ================\x1b[0m',
+      ` Duration: ${duration.toHuman()}`,
+    ]
+    if (useAnimation) {
+      statusLines.push(` Style: ${animationStyle}`)
+    }
+    statusLines.push('\x1b[2m Press Ctrl+C to cancel\x1b[0m')
+
+    const renderAnimatedScreen = (orbFrame: string) => {
+      const rows = process.stdout.rows || 24
+      const orbLines = orbFrame.split('\n')
+      const orbHeight = orbLines.length
+      const usableRows = Math.max(1, rows)
+      const screenLines = Array.from({ length: usableRows }, () => '')
+
+      const topPadding = Math.max(
+        0,
+        Math.floor((usableRows - orbHeight) / 2) - 2,
+      )
+      for (let i = 0; i < orbHeight; i++) {
+        const lineIndex = topPadding + i
+        if (lineIndex < usableRows) {
+          screenLines[lineIndex] = orbLines[i]
+        }
+      }
+
+      const maxStatusStart = Math.max(0, usableRows - statusLines.length)
+      const statusStart = maxStatusStart
+      for (let i = 0; i < statusLines.length; i++) {
+        const lineIndex = statusStart + i
+        if (lineIndex < usableRows) {
+          screenLines[lineIndex] = statusLines[i]
+        }
+      }
+
+      process.stdout.write('\x1b[H' + screenLines.join('\n'))
+    }
 
     if (!useAnimation) {
-      let output = '\x1b[0;0H\x1b[J'
-      output += stayAwakeDescription
-
-      process.stdout.write(output)
+      process.stdout.write('\x1b[0;0H\x1b[J' + statusLines.join('\n'))
     } else {
       orb!.start(() => {
-        const rows = process.stdout.rows || 24
-
-        const orbFrame = orb!.getFrame()
-        const orbLines = orbFrame.split('\n')
-        const orbHeight = orbLines.length
-
-        const topPadding = Math.floor((rows - orbHeight) / 2) - 2
-
-        let output = '\x1b[0;0H\x1b[J'
-        for (let i = 0; i < topPadding; i++) {
-          output += '\n'
-        }
-        output += orbLines.join('\n') + '\n'
-
-        const textStartLine = topPadding + orbHeight + 2
-
-        for (let i = textStartLine; i < rows - 3; i++) {
-          output += '\n'
-        }
-
-        output += '\x1b[1;32m'
-        output += stayAwakeDescription
-
-        process.stdout.write(output)
+        renderAnimatedScreen(orb!.getFrame())
       })
 
       if (shouldAutoStopAnimation) {

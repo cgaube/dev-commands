@@ -87,4 +87,8 @@ export function generateOrb(
 }
 
 export type { OrbStyle } from './orb-frame-generator'
-export { isOrbStyle, ORB_STYLES, pickRandomOrbStyle } from './orb-frame-generator'
+export {
+  isOrbStyle,
+  ORB_STYLES,
+  pickRandomOrbStyle,
+} from './orb-frame-generator'

@@ -1,7 +1,12 @@
 import { clamp } from './math'
 import type { StyleIntensityFn } from './types'
 
-export const rollingEyeIntensity: StyleIntensityFn = ({ time, nx, ny, dist }) => {
+export const rollingEyeIntensity: StyleIntensityFn = ({
+  time,
+  nx,
+  ny,
+  dist,
+}) => {
   const nz = Math.sqrt(Math.max(0, 1 - dist * dist))
 
   const rollX = Math.sin(time * 0.75) * 0.22

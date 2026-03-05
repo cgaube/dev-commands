@@ -49,7 +49,10 @@ function renderPoint(combined: number): string {
     return ' '
   }
 
-  const charIndex = Math.min(Math.floor(combined * CHARS.length), CHARS.length - 1)
+  const charIndex = Math.min(
+    Math.floor(combined * CHARS.length),
+    CHARS.length - 1,
+  )
   const colorIndex = Math.min(
     Math.floor(combined * GREEN_COLORS.length),
     GREEN_COLORS.length - 1,

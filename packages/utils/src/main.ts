@@ -52,7 +52,9 @@ utils
       : pickRandomOrbStyle()
 
     if (hasSelectedStyle && !isOrbStyle(selectedStyle)) {
-      log.warning(`Unknown animation style "${selectedStyle}". Using random style.`)
+      log.warning(
+        `Unknown animation style "${selectedStyle}". Using random style.`,
+      )
     }
 
     if (useAnimation) {

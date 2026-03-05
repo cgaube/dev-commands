@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.0.0-alpha.6",
+    "@types/luxon": "^3.7.1",
     "colorize-template": "^1.0.0",
     "commander": "^14.0.1",
     "execa": "^9.6.0",

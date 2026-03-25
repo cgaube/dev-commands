@@ -4,10 +4,11 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "strict": true,
+    "ignoreDeprecations": "6.0",
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "types": ["bun-types"],
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
     "paths": {
       "#common/*": ["../../common/*"],
       "#src/*": ["./src/*"]

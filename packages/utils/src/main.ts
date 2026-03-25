@@ -62,6 +62,13 @@ utils
       process.stdout.write('\x1b[?2026h')
       process.stdout.write('\x1b[2J\x1b[0;0H')
       process.stdout.write('\x1b[?25l')
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(true)
+        process.stdin.resume()
+        process.stdin.on('data', (data) => {
+          if (data[0] === 3) process.emit('SIGINT', 'SIGINT')
+        })
+      }
       terminalActive = true
     }
 
@@ -76,6 +83,10 @@ utils
 
     const cleanupTerminal = () => {
       if (!terminalActive) return
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(false)
+        process.stdin.pause()
+      }
       process.stdout.write('\x1b[?25h')
       process.stdout.write('\x1b[?2026l')
       process.stdout.write('\x1b[?1049l')
@@ -120,7 +131,9 @@ utils
         }
       }
 
-      process.stdout.write('\x1b[H' + screenLines.join('\n'))
+      process.stdout.write(
+        '\x1b[H' + screenLines.map((l) => l + '\x1b[K').join('\n') + '\x1b[J',
+      )
     }
 
     if (!useAnimation) {
@@ -137,11 +150,21 @@ utils
       }
     }
 
+    const resizeHandler = () => {
+      if (terminalActive) {
+        process.stdout.write('\x1b[2J\x1b[H')
+      }
+    }
+    if (useAnimation) {
+      process.on('SIGWINCH', resizeHandler)
+    }
+
     const caffeinate = execa('caffeinate', ['-disu', '-t', options.time], {
       stdio: 'inherit',
     })
 
     const sigintHandler = () => {
+      process.off('SIGWINCH', resizeHandler)
       if (orb) orb.stop()
       cleanupTerminal()
 
@@ -163,6 +186,7 @@ utils
       await caffeinate
     } finally {
       process.off('SIGINT', sigintHandler)
+      process.off('SIGWINCH', resizeHandler)
       if (animationStopTimer) clearTimeout(animationStopTimer)
       if (orb) orb.stop()
       cleanupTerminal()

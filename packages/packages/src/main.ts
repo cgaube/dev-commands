@@ -4,6 +4,7 @@ import {
   createInstallCommand,
   createUninstallCommand,
   createCreateCommand,
+  createUpdateCommand,
 } from '#src/commands'
 
 const pkg = devCliProgram({
@@ -15,5 +16,6 @@ pkg.addCommand(createInstallCommand())
 pkg.addCommand(createUninstallCommand())
 pkg.addCommand(createListCommand())
 pkg.addCommand(createCreateCommand())
+pkg.addCommand(createUpdateCommand())
 
 pkg.parse()

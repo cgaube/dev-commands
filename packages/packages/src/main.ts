@@ -8,7 +8,7 @@ import {
 } from '#src/commands'
 
 const pkg = devCliProgram({
-  name: 'package',
+  name: 'packages',
   summary: 'Manage devcommands packages',
 })
 

@@ -6,7 +6,7 @@ tap.
 ## Install
 
 ```bash
-dev package install packages
+brew install cgaube/devcommands/devcommand-packages
 ```
 
 (Typically bundled with `dev-cli` itself, invoked as `package` or
@@ -15,7 +15,7 @@ dev package install packages
 ## Usage
 
 ```bash
-package <subcommand> [options]
+packages <subcommand> [options]
 ```
 
 ## Commands

@@ -5,7 +5,7 @@ A collection of small utility commands for day-to-day system tasks.
 ## Install
 
 ```bash
-dev package install utils
+dev packages install utils
 ```
 
 ## Usage

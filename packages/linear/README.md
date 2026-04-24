@@ -5,7 +5,7 @@ Linear-related dev commands for bridging Linear issues into your git workflow.
 ## Install
 
 ```bash
-dev package install linear
+dev packages install linear
 ```
 
 ## Usage

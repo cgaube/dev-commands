@@ -5,7 +5,7 @@ Git-related dev commands with interactive prompts and AI-assisted commits.
 ## Install
 
 ```bash
-dev package install git
+dev packages install git
 ```
 
 ## Usage

@@ -3,7 +3,7 @@ import { Command } from 'commander'
 import { outro, cancel, isCancel, confirm, log } from '@clack/prompts'
 import { execa } from 'execa'
 import { colors, colorize, introTitle } from '#common/style'
-import { execaCallback } from '#common/commands'
+import { execaCallback, spinnerCallback } from '#common/commands'
 import { resolveProvider, generateWithAI } from '#common/ai'
 
 const MAX_DIFF_CHARS = 15000
@@ -155,14 +155,16 @@ export function createCommitCommand() {
       const commitArgs = ['commit', '-m', title]
       if (body) commitArgs.push('-m', body)
 
-      await execaCallback('git', ['add', '-A'], {
-        startMessage: 'Staging changes',
-        successMessage: 'Changes staged',
-      })
-      await execaCallback('git', commitArgs, {
-        startMessage: 'Creating commit',
-        successMessage: 'Commit created',
-      })
+      await spinnerCallback(
+        async () => {
+          await execa('git', ['add', '-A'])
+          await execa('git', commitArgs)
+        },
+        {
+          startMessage: 'Committing',
+          successMessage: 'Committed',
+        },
+      )
 
       outro()
     })

@@ -9,9 +9,6 @@ tap.
 brew install cgaube/devcommands/devcommand-packages
 ```
 
-(Typically bundled with `dev-cli` itself, invoked as `package` or
-`dev package`.)
-
 ## Usage
 
 ```bash

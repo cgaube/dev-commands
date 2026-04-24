@@ -3,8 +3,9 @@ import { Command } from 'commander'
 import { outro, cancel, isCancel, confirm, log } from '@clack/prompts'
 import { execa } from 'execa'
 import { colors, colorize, introTitle } from '#common/style'
-import { execaCallback, spinnerCallback } from '#common/commands'
+import { spinnerCallback } from '#common/commands'
 import { resolveProvider, generateWithAI } from '#common/ai'
+import { gitOutput } from '../utils/git'
 
 const MAX_DIFF_CHARS = 15000
 const MAX_UNTRACKED_FILE_BYTES = 32 * 1024
@@ -23,11 +24,6 @@ ${FORMAT_RULES}`
 const COMMIT_PROMPT_PARTIAL = `Write a git commit message for the changes in this repository.
 
 ${FORMAT_RULES}`
-
-async function gitOutput(args: string[]): Promise<string> {
-  const { stdout } = await execa('git', args)
-  return stdout.toString()
-}
 
 async function readUntrackedFiles(): Promise<string> {
   const list = (await gitOutput(['ls-files', '--others', '--exclude-standard']))
@@ -113,23 +109,15 @@ export function createCommitCommand() {
 
       const provider = resolveProvider(options.ai)
 
-      const statusOutput = await execaCallback(
-        'git',
-        ['status', '--porcelain'],
-        {
-          startMessage: 'Checking working tree',
-          successMessage: 'Working tree checked',
-        },
-      )
-      const hasChanges = statusOutput
-        .toArray()
+      const statusPorcelain = await gitOutput(['status', '--porcelain'])
+      const hasChanges = statusPorcelain
+        .split(/\r?\n/)
         .some((line) => line.trim().length > 0)
 
       if (!hasChanges) {
         return cancel('Nothing to commit. Working tree is clean.')
       }
 
-      const statusPorcelain = statusOutput.toString()
       const { prompt, context } = await buildCommitContext(statusPorcelain)
 
       const message = await generateWithAI(provider, prompt, context)

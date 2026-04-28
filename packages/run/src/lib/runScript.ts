@@ -1,11 +1,12 @@
-import { outro, cancel, isCancel, log, select } from '@clack/prompts'
+import { cancel, isCancel, log, select } from '@clack/prompts'
+import { execa } from 'execa'
 import {
   introTitle,
   exitWithError,
   exitWithCancel,
   colors,
+  colorize,
 } from '#common/style'
-import { taskLogCommand } from '#common/commands'
 import { discoverScripts } from '#src/sources'
 import type { ScriptEntry, SourceId } from '#src/sources'
 
@@ -44,8 +45,18 @@ function parseNameArg(raw: string): { source?: SourceId; name: string } {
 }
 
 async function runEntry(entry: ScriptEntry, forwardedArgs: string[]) {
+  const bin = entry.command[0]!
   const args = [...entry.command.slice(1), ...forwardedArgs]
-  await taskLogCommand(entry.command[0]!, args, {})
+  log.info(colorize`{blue Executing:}`)
+  try {
+    await execa(bin, args, { stdio: 'inherit', cwd: entry.cwd, log })
+  } catch (err: unknown) {
+    const code =
+      typeof err === 'object' && err && 'exitCode' in err
+        ? (err as { exitCode?: number }).exitCode
+        : undefined
+    process.exit(code ?? 1)
+  }
 }
 
 export async function runScript(
@@ -66,7 +77,6 @@ export async function runScript(
     const choice = await pickFromList(scripts, 'Pick a script to run')
     if (isCancel(choice)) return cancel('Operation cancelled.')
     await runEntry(choice, [])
-    outro()
     return
   }
 
@@ -100,5 +110,4 @@ export async function runScript(
   }
 
   await runEntry(entry, scriptArgs)
-  outro()
 }

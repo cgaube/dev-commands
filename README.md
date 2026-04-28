@@ -33,6 +33,8 @@ each package's README for commands and options.
   issues
 - [`@devcommands/packages`](./packages/packages) — install, update, and scaffold
   devcommands packages
+- [`@devcommands/run`](./packages/run) — run project scripts from any package
+  manager (bun/pnpm/yarn/npm, make, just, task) with auto-detection
 - [`@devcommands/utils`](./packages/utils) — misc utilities (`stay-awake`,
   `port`)
 

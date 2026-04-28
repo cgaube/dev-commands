@@ -1,6 +1,6 @@
-import { dirname } from 'node:path'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { execa } from 'execa'
-import { findUp } from '#src/utils/findUp'
 import type { DiscoveryResult, ScriptEntry } from './index'
 
 type TaskEntry = {
@@ -13,8 +13,10 @@ type TaskList = {
   tasks: TaskEntry[]
 }
 
-export async function discoverTask(cwd: string): Promise<DiscoveryResult> {
-  const file = findUp(['Taskfile.yml', 'Taskfile.yaml'], cwd)
+export async function discoverTask(rootDir: string): Promise<DiscoveryResult> {
+  const file = ['Taskfile.yml', 'Taskfile.yaml']
+    .map((name) => join(rootDir, name))
+    .find((p) => existsSync(p))
   if (!file) return { scripts: [], warnings: [] }
 
   if (!Bun.which('task')) {
@@ -24,7 +26,7 @@ export async function discoverTask(cwd: string): Promise<DiscoveryResult> {
     }
   }
 
-  const dir = dirname(file)
+  const dir = rootDir
 
   let list: TaskList
   try {

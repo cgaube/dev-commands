@@ -1,7 +1,19 @@
+import { dirname } from 'node:path'
+import { findUp } from '#src/utils/findUp'
 import { discoverJs } from './js'
 import { discoverMake } from './make'
 import { discoverJust } from './just'
 import { discoverTask } from './task'
+
+const MANIFEST_FILES = [
+  'package.json',
+  'Makefile',
+  'makefile',
+  'GNUmakefile',
+  'justfile',
+  'Taskfile.yml',
+  'Taskfile.yaml',
+]
 
 export type SourceId =
   | 'bun'
@@ -39,11 +51,15 @@ export async function discoverScripts(cwd: string): Promise<DiscoveryResult> {
   const scripts: ScriptEntry[] = []
   const warnings: string[] = []
 
+  const manifest = findUp(MANIFEST_FILES, cwd)
+  if (!manifest) return { scripts, warnings }
+  const rootDir = dirname(manifest)
+
   const results = await Promise.all([
-    discoverJs(cwd),
-    discoverMake(cwd),
-    discoverJust(cwd),
-    discoverTask(cwd),
+    discoverJs(rootDir),
+    discoverMake(rootDir),
+    discoverJust(rootDir),
+    discoverTask(rootDir),
   ])
 
   for (const r of results) {

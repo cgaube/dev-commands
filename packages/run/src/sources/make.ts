@@ -1,12 +1,14 @@
-import { readFileSync } from 'node:fs'
-import { findUp } from '#src/utils/findUp'
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import type { DiscoveryResult, ScriptEntry } from './index'
 
-export function discoverMake(cwd: string): DiscoveryResult {
-  const file = findUp(['Makefile', 'makefile', 'GNUmakefile'], cwd)
+export function discoverMake(rootDir: string): DiscoveryResult {
+  const file = ['Makefile', 'makefile', 'GNUmakefile']
+    .map((name) => join(rootDir, name))
+    .find((p) => existsSync(p))
   if (!file) return { scripts: [], warnings: [] }
 
-  const dir = file.replace(/\/[^/]+$/, '')
+  const dir = rootDir
   const content = readFileSync(file, 'utf8')
   const lines = content.split('\n')
 

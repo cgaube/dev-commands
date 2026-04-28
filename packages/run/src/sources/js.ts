@@ -1,12 +1,11 @@
-import { readFileSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { detectPackageManager, runScriptCommand } from 'nypm'
-import { findUp } from '#src/utils/findUp'
 import type { DiscoveryResult, ScriptEntry, SourceId } from './index'
 
-export async function discoverJs(cwd: string): Promise<DiscoveryResult> {
-  const pkgPath = findUp(['package.json'], cwd)
-  if (!pkgPath) return { scripts: [], warnings: [] }
+export async function discoverJs(rootDir: string): Promise<DiscoveryResult> {
+  const pkgPath = join(rootDir, 'package.json')
+  if (!existsSync(pkgPath)) return { scripts: [], warnings: [] }
 
   let pkg: { scripts?: Record<string, string> }
   try {
@@ -19,7 +18,7 @@ export async function discoverJs(cwd: string): Promise<DiscoveryResult> {
   const names = Object.keys(scriptsObj)
   if (names.length === 0) return { scripts: [], warnings: [] }
 
-  const dir = dirname(pkgPath)
+  const dir = rootDir
   const detected = await detectPackageManager(dir)
   const pm = (detected?.name ?? 'npm') as SourceId
 

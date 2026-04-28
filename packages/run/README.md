@@ -63,5 +63,9 @@ correctly.
 
 ## Notes
 
-- Discovery walks up from the current directory and stops at `$HOME` or the
+- Discovery walks up from the current directory until it finds the nearest
+  directory containing any known manifest (`package.json`, `Makefile`,
+  `justfile`, `Taskfile.yml`) and treats that as the project root. Only sources
+  in that directory are collected, so a nested `package.json` won't pull in a
+  `justfile` from further up the tree. The walk stops at `$HOME` or the
   filesystem root.

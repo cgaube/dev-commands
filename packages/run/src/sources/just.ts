@@ -1,6 +1,6 @@
-import { dirname } from 'node:path'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { execa } from 'execa'
-import { findUp } from '#src/utils/findUp'
 import type { DiscoveryResult, ScriptEntry } from './index'
 
 type JustRecipe = {
@@ -13,9 +13,9 @@ type JustDump = {
   recipes: Record<string, JustRecipe>
 }
 
-export async function discoverJust(cwd: string): Promise<DiscoveryResult> {
-  const file = findUp(['justfile'], cwd)
-  if (!file) return { scripts: [], warnings: [] }
+export async function discoverJust(rootDir: string): Promise<DiscoveryResult> {
+  const file = join(rootDir, 'justfile')
+  if (!existsSync(file)) return { scripts: [], warnings: [] }
 
   if (!Bun.which('just')) {
     return {
@@ -24,7 +24,7 @@ export async function discoverJust(cwd: string): Promise<DiscoveryResult> {
     }
   }
 
-  const dir = dirname(file)
+  const dir = rootDir
 
   let dump: JustDump
   try {

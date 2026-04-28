@@ -16,6 +16,17 @@ linear <subcommand> [options]
 
 ## Commands
 
+### `list` (alias: `me`)
+
+List your assigned Linear issues without creating a branch.
+
+Options:
+
+- `--team <teams...>` — override team keys or names to filter issues by
+- `--label <labels...>` — override labels to filter issues by
+- `--state <states...>` — override statuses to filter issues by (default:
+  `"In Progress"`)
+
 ### `start` (alias: `branch`)
 
 Pick one of your assigned Linear issues and create/checkout a git branch named
@@ -23,7 +34,7 @@ after it.
 
 Options:
 
-- `--team <teams...>` — override teams to filter issues by
+- `--team <teams...>` — override team keys or names to filter issues by
 - `--label <labels...>` — override labels to filter issues by
 - `--state <states...>` — override statuses to filter issues by (default:
   `"In Progress"`)

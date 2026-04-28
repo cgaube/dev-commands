@@ -10,9 +10,11 @@ pre-commit:
     - name: prettier
       glob: '*.{js,ts,jsx,tsx,json,yml,yaml,md}'
       run: bun run format {staged_files}
+      stage_fixed: true
     - name: eslint
       glob: '*.{js,ts,jsx,tsx}'
       run: bun run lint {staged_files}
+      stage_fixed: true
 
 pre-push:
   parallel: true

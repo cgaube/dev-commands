@@ -5,7 +5,7 @@ export type ConfigValue = {
   options?: Array<string>
   secret?: boolean
   required?: boolean
-  global?: boolean // Set to "false" to only be used in a subdirectories
+  global?: boolean // Set to "false" to only be used in subdirectories
 }
 
 export type ConfigSchema = Record<string, ConfigValue>

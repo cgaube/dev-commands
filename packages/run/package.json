@@ -1,0 +1,19 @@
+{
+  "name": "@devcommands/run",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "bun run ts:check && bun build src/main.ts --outfile dist/run",
+    "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/run",
+    "compile:watch": "bun run compile --watch",
+    "ts:check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.1.0",
+    "colorize-template": "^1.0.0",
+    "commander": "^14.0.3",
+    "execa": "^9.6.1",
+    "nypm": "^0.6.6",
+    "picocolors": "^1.1.1"
+  }
+}

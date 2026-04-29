@@ -136,6 +136,7 @@ const regEx = ansiRegex()
 function stripAnsi(string: string) {
   return string.replace(regEx, '')
 }
+
 function ansiRegex({ onlyFirst = false } = {}) {
   // Valid string terminator sequences are BEL, ESC\, and 0x9c
   const ST = '(?:\\u0007|\\u001B\\u005C|\\u009C)'
@@ -149,6 +150,7 @@ function ansiRegex({ onlyFirst = false } = {}) {
 
   return new RegExp(pattern, onlyFirst ? undefined : 'g')
 }
+
 function wrap(text: string): string {
   const width = process.stdout.columns - 3
   return text
@@ -180,4 +182,23 @@ function outroOrCancel(
   }
 }
 
-export { spinnerCallback, execaCallback, taskLogCommand, outroOrCancel }
+async function handOffTo(command: string, args: string[] = []) {
+  log.message('', { spacing: 0, symbol: colors.dim('┊') })
+  const result = await execa(command, args, {
+    stdio: 'inherit',
+    reject: false,
+  })
+  if (result.signal) {
+    process.kill(process.pid, result.signal)
+    return
+  }
+  process.exit(result.exitCode ?? 1)
+}
+
+export {
+  spinnerCallback,
+  execaCallback,
+  taskLogCommand,
+  outroOrCancel,
+  handOffTo,
+}

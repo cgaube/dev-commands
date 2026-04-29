@@ -105,7 +105,7 @@ export default function setupProgramConfiguration<TSchema extends ConfigSchema>(
           )
         }
 
-        let promptChoices: string[] = []
+        let promptChoices: string[]
         if (name) {
           const config = configStore.configSchema[name]
           if (!config) {

@@ -10,8 +10,8 @@
     "ts:check": "tsc --noEmit"
   },
   "dependencies": {
-    "@clack/prompts": "^1.1.0",
-    "@linear/sdk": "^80.0.0",
+    "@clack/prompts": "^1.2.0",
+    "@linear/sdk": "^82.1.0",
     "@types/voca": "^1.4.6",
     "colorize-template": "^1.0.0",
     "commander": "^14.0.3",

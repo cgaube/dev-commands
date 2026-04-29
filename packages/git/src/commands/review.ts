@@ -41,7 +41,7 @@ async function resolveDiff(options: Options): Promise<Resolved> {
       exitWithError(
         `Failed to fetch PR #${options.pr}: ${detail}\nIs \`gh\` installed and authenticated?`,
       )
-      throw new Error('unreachable')
+      throw new Error('unreachable', { cause: err })
     }
   }
 

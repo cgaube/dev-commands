@@ -1,8 +1,8 @@
 import { Command } from 'commander'
-import { outro, cancel, isCancel, confirm, log } from '@clack/prompts'
+import { handOffTo } from '#common/commands'
+import { cancel, isCancel, confirm, log } from '@clack/prompts'
 import { execa } from 'execa'
 import { colors, colorize, introTitle } from '#common/style'
-import { spinnerCallback } from '#common/commands'
 import { resolveProvider, generateWithAI } from '#common/ai'
 import { gitOutput } from '../utils/git'
 import { COMMIT_PROMPT } from '../utils/prompts'
@@ -62,16 +62,6 @@ export function createCommitCommand() {
       const commitArgs = ['commit', '-m', title]
       if (body) commitArgs.push('-m', body)
 
-      await spinnerCallback(
-        async () => {
-          await execa('git', commitArgs)
-        },
-        {
-          startMessage: 'Committing',
-          successMessage: 'Committed',
-        },
-      )
-
-      outro()
+      await handOffTo('git', commitArgs)
     })
 }

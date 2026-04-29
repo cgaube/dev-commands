@@ -1,5 +1,5 @@
 import { Command } from 'commander'
-import { outro, cancel, log } from '@clack/prompts'
+import { cancel, log, note } from '@clack/prompts'
 import { execa, ExecaError } from 'execa'
 import { colors, colorize, introTitle, exitWithError } from '#common/style'
 import { resolveProvider, generateWithAI } from '#common/ai'
@@ -158,9 +158,8 @@ export function createReviewCommand() {
         return cancel('AI returned no review.')
       }
 
-      log.message(review)
-      log.message(colors.dim(`— reviewed by ${provider.name}`))
-
-      outro()
+      note(review, 'Review', {
+        format: (line: string) => colors.reset(line),
+      })
     })
 }

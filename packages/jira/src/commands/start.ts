@@ -11,7 +11,7 @@ export function createStartCommand() {
   return withIssueFilters(
     new Command('start')
       .alias('branch')
-      .description('start a git branch based on a linear issue')
+      .description('start a git branch based on a jira issue')
       .action(async (opts) => {
         introTitle('Start branch')
         await exitIfInvalid()

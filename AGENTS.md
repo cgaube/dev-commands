@@ -43,3 +43,6 @@ packages/[NAME]/src/main.ts
 
 Copy the same packages.json script by changing the name at the right places
 Remember to also copy the tsconfig.json file
+
+Always add a `README.md` at `packages/[NAME]/README.md` describing what the
+package does, its commands and options, and any required configuration.

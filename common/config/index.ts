@@ -3,6 +3,7 @@ import type { ConfigSchema } from './types'
 import {
   group,
   text,
+  select,
   cancel,
   outro,
   log,
@@ -267,11 +268,20 @@ export default function setupProgramConfiguration<TSchema extends ConfigSchema>(
 
         const currentValue = await configStore.get(key)
 
-        // Todo if options specified use select, if default value is array use multiselect
+        if (configSetting.options?.length) {
+          return select({
+            message,
+            initialValue: currentValue,
+            options: configSetting.options.map((opt) => ({
+              value: opt,
+              label: opt,
+            })),
+          })
+        }
+
         return text({
           message,
           initialValue: currentValue,
-          // Require value
           validate(value) {
             if (configSetting.required && (value || '').length === 0)
               return `Value is required!`

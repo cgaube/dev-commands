@@ -10,7 +10,7 @@ export function createListCommand() {
   return withIssueFilters(
     new Command('list')
       .alias('me')
-      .description('list assigned linear issues')
+      .description('list assigned jira issues')
       .action(async (opts) => {
         introTitle('Assigned issues')
         await exitIfInvalid()

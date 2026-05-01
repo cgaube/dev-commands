@@ -4,7 +4,10 @@ import type { NormalizedIssue } from '#src/types'
 
 export function withIssueFilters<T extends Command>(command: T) {
   return command
-    .option('--team <teams...>', 'team keys or names to filter issues by')
+    .option(
+      '--project <projects...>',
+      'project keys or names to filter issues by',
+    )
     .option('--label <labels...>', 'labels to filter issues by')
     .option('--state <states...>', 'statuses to filter issues by', [
       'In Progress',

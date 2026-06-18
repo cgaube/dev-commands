@@ -61,6 +61,7 @@ export function InfoPane({ node, pr }: { node?: StackNode; pr: PrState }) {
     [
       node?.isTrunk ? 'trunk' : '',
       node?.isCurrent ? 'current' : '',
+      node?.isDirty ? 'dirty' : '',
       node && !node.isTrunk && node.isMerged ? 'merged' : '',
       node && !node.exists ? 'gone' : '',
     ]

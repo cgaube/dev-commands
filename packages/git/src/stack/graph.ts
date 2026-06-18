@@ -12,10 +12,16 @@ export type StackNode = {
   isCurrent: boolean
   isTrunk: boolean
   isMerged: boolean
+  isDirty: boolean
   exists: boolean
 }
 
 export type FlatNode = { node: StackNode; depth: number }
+
+async function isWorkingTreeDirty(): Promise<boolean> {
+  const out = await gitOutput(['status', '--porcelain'])
+  return out.split(/\r?\n/).some((l) => l.trim().length > 0)
+}
 
 // Commits the branch has that its base doesn't (ahead) and vice-versa (behind).
 // `git rev-list --left-right --count base...branch` prints "behind<TAB>ahead".
@@ -49,6 +55,8 @@ export async function buildForest(
   const current = getCurrentBranch()
   const tracked = new Set(Object.keys(data.branches))
 
+  const dirty = await isWorkingTreeDirty()
+
   const root: StackNode = {
     name: data.trunk,
     parent: null,
@@ -58,6 +66,7 @@ export async function buildForest(
     isCurrent: current === data.trunk,
     isTrunk: true,
     isMerged: false,
+    isDirty: current === data.trunk && dirty,
     exists: (await resolveSha(data.trunk)) !== null,
   }
 
@@ -83,6 +92,7 @@ export async function buildForest(
       isCurrent: current === name,
       isTrunk: false,
       isMerged: exists ? await isMerged(name, data.trunk) : true,
+      isDirty: current === name && dirty,
       exists,
     })
   }

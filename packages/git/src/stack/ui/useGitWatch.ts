@@ -26,6 +26,9 @@ export function useGitWatch(
     try {
       watchers.push(watch(`${gitDir}/devstack.json`, fire))
     } catch {}
+    try {
+      watchers.push(watch(`${gitDir}/index`, fire))
+    } catch {}
 
     return () => {
       clearTimeout(timer.current)

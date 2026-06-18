@@ -20,11 +20,6 @@ import { useSpinner } from './useSpinner'
 type DiffState = { text: string; truncated: boolean } | null
 type LogState = BranchLog | null
 
-// Full-screen stack navigator laid out as header / two-column body / footer.
-// The left column is the branch tree; the right column shows branch info, a diff
-// or a commit log for the selected branch. Owns the cursor and all mutations;
-// every git operation reloads the forest so the tree, badges and ahead/behind
-// counts stay in sync with reality.
 export function App() {
   const { exit } = useApp()
   const { cols, rows } = useTerminalSize()
@@ -38,7 +33,6 @@ export function App() {
   const [right, setRight] = useState<TabMode>('info')
   const [diff, setDiff] = useState<DiffState>(null)
   const [log, setLog] = useState<LogState>(null)
-  // Per-branch PR cache for the session (network lookups via `gh`).
   const [prs, setPrs] = useState<Record<string, PrInfo | null>>({})
   const [gitDir, setGitDir] = useState<string | null>(null)
 
@@ -81,7 +75,6 @@ export function App() {
 
   const selectedNode = nodes[selected]?.node
 
-  // Load the selected branch's diff lazily, only while the diff pane is open.
   useEffect(() => {
     if (right !== 'diff' || !selectedNode || selectedNode.isTrunk) {
       setDiff(null)
@@ -97,8 +90,6 @@ export function App() {
     }
   }, [right, selectedNode])
 
-  // Load the selected branch's commit log lazily, only while the log pane is
-  // open. Trunk is allowed — branchLog shows its recent history.
   useEffect(() => {
     if (right !== 'log' || !selectedNode) {
       setLog(null)
@@ -114,8 +105,6 @@ export function App() {
     }
   }, [right, selectedNode])
 
-  // Look up the selected branch's PR while the info pane is showing, caching the
-  // result so navigating back doesn't re-hit `gh`.
   useEffect(() => {
     if (right !== 'info' || !selectedNode || selectedNode.isTrunk) return
     const name = selectedNode.name
@@ -150,8 +139,6 @@ export function App() {
       return `on ${name}`
     })
 
-  // Open the branch's PR in the browser. `gh pr view --web` exits non-zero when
-  // there's no PR (or gh isn't set up), which we surface as a friendly message.
   const openPr = (name: string) =>
     run(`opening PR for ${name}…`, async () => {
       try {
@@ -177,8 +164,6 @@ export function App() {
     run('syncing…', async () => {
       const r = await sync()
       if (r.merged.length) {
-        // The merged branches' changes are in trunk; drop the local refs. Step
-        // off them first so git doesn't refuse to delete the current branch.
         await execa('git', ['checkout', trunk]).catch(() => {})
         for (const b of r.merged) {
           await execa('git', ['branch', '-D', b]).catch(() => {})
@@ -204,12 +189,10 @@ export function App() {
     } else if (key.return || input === 'c') {
       if (selectedNode) checkout(selectedNode.name)
     } else if (key.tab) {
-      // Tab / Shift+Tab cycle through the right-panel tabs.
       const idx = TABS.findIndex((t) => t.mode === right)
       const delta = key.shift ? -1 : 1
       setRight(TABS[(idx + delta + TABS.length) % TABS.length].mode)
     } else if (TABS.some((t) => t.key === input)) {
-      // Direct shortcuts (i/d/l) jump straight to a tab.
       setRight(TABS.find((t) => t.key === input)!.mode)
     } else if (input === 'o') {
       if (selectedNode && !selectedNode.isTrunk) openPr(selectedNode.name)
@@ -218,20 +201,29 @@ export function App() {
     } else if (input === 's') {
       doSync()
     } else if (input === 'R') {
-      // Re-read everything and drop the PR cache so changes made elsewhere
-      // (another tab's `stack create`, an external checkout, new commits, or a
-      // freshly-opened PR) are all picked up.
       setPrs({})
       run('refreshing…', async () => 'refreshed')
     }
   })
 
-  // Header (3) + footer (4) borders/lines leave the rest for the body. The right
-  // panel additionally spends a row on its tab strip.
-  const bodyHeight = Math.max(6, rows - 7)
-  const leftWidth = Math.max(26, Math.floor(cols * 0.4))
-  const treeRows = Math.max(3, bodyHeight - 3)
-  const paneLines = Math.max(3, bodyHeight - 4)
+  // Each bordered box costs 2 rows (top + bottom border).
+  // Header(3) + tree borders(2) + pane borders(2) + footer(3 or 4).
+  // On very small terminals, collapse the shortcut hints to save a row.
+  const compactFooter = rows < 20
+  const fixedChrome = 3 + 2 + 2 + (compactFooter ? 3 : 4)
+  const contentBudget = Math.max(6, rows - fixedChrome)
+
+  // Tree content: "Stack" label (1) + branch rows. Cap at 40% of budget.
+  const treeNatural = 1 + nodes.length
+  const treeContent = Math.max(3, Math.min(treeNatural, Math.floor(contentBudget * 0.4)))
+  const treeRows = Math.max(2, treeContent - 1)
+
+  // Pane content: tab strip (1) + margin (1) + visible lines.
+  const paneContent = Math.max(3, contentBudget - treeContent)
+  const paneLines = Math.max(1, paneContent - 2)
+
+  // Inner width available for tree content (inside border + paddingX=1).
+  const innerWidth = cols - 4 // 2 border chars + 2 padding chars
 
   const prState =
     !selectedNode || selectedNode.isTrunk
@@ -265,6 +257,7 @@ export function App() {
 
   return (
     <Box flexDirection="column" width={cols} height={rows}>
+      {/* Header */}
       <Box
         borderStyle="round"
         borderColor="cyan"
@@ -280,40 +273,45 @@ export function App() {
         </Text>
       </Box>
 
-      <Box flexGrow={1} flexDirection="row">
-        <Box
-          flexDirection="column"
-          borderStyle="round"
-          borderColor="gray"
-          paddingX={1}
-          width={leftWidth}
-        >
-          <Text bold>Stack</Text>
-          <Tree nodes={nodes} selected={selected} maxRows={treeRows} />
-        </Box>
+      {/* Tree */}
+      <Box
+        flexDirection="column"
+        borderStyle="round"
+        borderColor="gray"
+        paddingX={1}
+        height={treeContent + 2}
+      >
+        <Text bold>Stack</Text>
+        <Tree
+          nodes={nodes}
+          selected={selected}
+          maxRows={treeRows}
+          maxWidth={innerWidth}
+        />
+      </Box>
 
-        <Box
-          flexGrow={1}
-          flexDirection="column"
-          borderStyle="round"
-          borderColor="gray"
-          paddingX={1}
-          marginLeft={1}
-        >
-          <Tabs
-            active={right}
-            branch={
-              selectedNode && !selectedNode.isTrunk
-                ? selectedNode.name
-                : undefined
-            }
-          />
-          <Box marginTop={1} flexDirection="column" flexGrow={1}>
-            {tabContent}
-          </Box>
+      {/* Tab panel */}
+      <Box
+        flexGrow={1}
+        flexDirection="column"
+        borderStyle="round"
+        borderColor="gray"
+        paddingX={1}
+      >
+        <Tabs
+          active={right}
+          branch={
+            selectedNode && !selectedNode.isTrunk
+              ? selectedNode.name
+              : undefined
+          }
+        />
+        <Box marginTop={1} flexDirection="column" flexGrow={1}>
+          {tabContent}
         </Box>
       </Box>
 
+      {/* Footer */}
       <Box
         flexDirection="column"
         borderStyle="round"
@@ -324,10 +322,12 @@ export function App() {
           <Text color={busy ? 'yellow' : 'green'}>{busy ? '⏳ ' : '› '}</Text>
           <Text>{status}</Text>
         </Box>
-        <Text dimColor>
-          ↑/↓ move · enter checkout · tab/i/d/l tabs · o open-pr · r restack · s
-          sync · R refresh · q quit
-        </Text>
+        {!compactFooter && (
+          <Text dimColor>
+            ↑/↓ move · enter checkout · tab/i/d/l tabs · o open-pr · r restack
+            · s sync · R refresh · q quit
+          </Text>
+        )}
       </Box>
     </Box>
   )

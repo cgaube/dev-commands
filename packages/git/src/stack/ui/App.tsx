@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Text, useApp, useInput } from 'ink'
 import { execa } from 'execa'
 import { buildForest, flatten, type FlatNode } from '#src/stack/graph'
+import { gitOutput } from '#src/utils/git'
 import { restack } from '#src/stack/restack'
 import { sync } from '#src/stack/sync'
 import { branchDiff } from '#src/stack/diff'
@@ -13,6 +14,8 @@ import { LogPane } from './LogPane'
 import { InfoPane } from './InfoPane'
 import { Tabs, TABS, type TabMode } from './Tabs'
 import { useTerminalSize } from './useTerminalSize'
+import { useGitWatch } from './useGitWatch'
+import { useSpinner } from './useSpinner'
 
 type DiffState = { text: string; truncated: boolean } | null
 type LogState = BranchLog | null
@@ -31,11 +34,16 @@ export function App() {
   const [selected, setSelected] = useState(0)
   const [status, setStatus] = useState('loading…')
   const [busy, setBusy] = useState(false)
+  const [syncing, setSyncing] = useState(false)
   const [right, setRight] = useState<TabMode>('info')
   const [diff, setDiff] = useState<DiffState>(null)
   const [log, setLog] = useState<LogState>(null)
   // Per-branch PR cache for the session (network lookups via `gh`).
   const [prs, setPrs] = useState<Record<string, PrInfo | null>>({})
+  const [gitDir, setGitDir] = useState<string | null>(null)
+
+  const busyRef = useRef(busy)
+  busyRef.current = busy
 
   const reload = useCallback(async (focusCurrent = false) => {
     const { root, meta } = await buildForest()
@@ -43,8 +51,6 @@ export function App() {
     setTrunk(meta.trunk)
     setNodes(flat)
     setSelected((s) => {
-      // On the initial load, land the cursor on the checked-out branch; on
-      // reloads after an operation, keep wherever the user navigated to.
       if (focusCurrent) {
         const current = flat.findIndex((n) => n.node.isCurrent)
         if (current >= 0) return current
@@ -54,10 +60,24 @@ export function App() {
   }, [])
 
   useEffect(() => {
+    gitOutput(['rev-parse', '--absolute-git-dir']).then((d) =>
+      setGitDir(d.trim()),
+    )
     reload(true)
       .then(() => setStatus('ready'))
       .catch((e) => setStatus(String(e)))
   }, [reload])
+
+  const watchReload = useCallback(async () => {
+    if (busyRef.current) return
+    setSyncing(true)
+    await reload()
+    setSyncing(false)
+  }, [reload])
+
+  useGitWatch(gitDir, watchReload)
+
+  const spinner = useSpinner(syncing)
 
   const selectedNode = nodes[selected]?.node
 
@@ -252,7 +272,8 @@ export function App() {
         justifyContent="space-between"
       >
         <Text bold color="cyan">
-          dev stack
+          dev stack{' '}
+          {syncing && <Text color="yellow">{spinner}</Text>}
         </Text>
         <Text dimColor>
           trunk: {trunk} · {nodes.length} branches

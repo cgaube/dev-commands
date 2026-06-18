@@ -28,6 +28,10 @@ Multi-select local branches and delete them in one pass.
 
 Generate a commit message with AI from the staged diff, then commit.
 
+### `review`
+
+Review your local changes with AI before pushing.
+
 ### `pr`
 
 Check out the branch of a GitHub pull request.
@@ -36,4 +40,4 @@ Check out the branch of a GitHub pull request.
 
 - `pr` requires the [`gh`](https://cli.github.com/) CLI to be installed and
   authenticated.
-- `commit` requires an AI provider CLI (defaults to `claude`).
+- `commit` and `review` require an AI provider CLI (defaults to `claude`).

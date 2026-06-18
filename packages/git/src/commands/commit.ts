@@ -4,10 +4,8 @@ import { cancel, isCancel, confirm, log } from '@clack/prompts'
 import { execa } from 'execa'
 import { colors, colorize, introTitle } from '#common/style'
 import { resolveProvider, generateWithAI } from '#common/ai'
-import { gitOutput } from '../utils/git'
+import { gitOutput, truncateDiff } from '../utils/git'
 import { COMMIT_PROMPT } from '../utils/prompts'
-
-const MAX_DIFF_CHARS = 15000
 
 export function createCommitCommand() {
   return new Command('commit')
@@ -34,10 +32,8 @@ export function createCommitCommand() {
         gitOutput(['diff', '--cached']),
       ])
 
-      const context =
-        diff.length > MAX_DIFF_CHARS
-          ? `## Diff stat\n${stat.trim() || '(empty)'}\n\n## Diff (truncated)\n${diff.slice(0, MAX_DIFF_CHARS)}\n\n[diff truncated]`
-          : `## Diff stat\n${stat.trim() || '(empty)'}\n\n## Diff\n${diff}`
+      const { text, truncated } = truncateDiff(diff)
+      const context = `## Diff stat\n${stat.trim() || '(empty)'}\n\n## Diff${truncated ? ' (truncated)' : ''}\n${text}`
 
       const message = await generateWithAI(provider, COMMIT_PROMPT, context)
 

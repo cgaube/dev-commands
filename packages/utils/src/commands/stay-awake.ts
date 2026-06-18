@@ -2,7 +2,6 @@ import { Command } from 'commander'
 import { log, outro } from '@clack/prompts'
 import { execa } from 'execa'
 import { Duration } from 'luxon'
-import readline from 'readline'
 import {
   isOrbStyle,
   ORB_STYLES,
@@ -10,6 +9,7 @@ import {
   pickRandomOrbStyle,
   type OrbStyle,
 } from '../animation/orb-animation'
+import { runFullscreenOrb } from '../animation/orb-screen'
 
 export function createStayAwakeCommand() {
   return new Command('stay-awake')
@@ -31,145 +31,33 @@ export function createStayAwakeCommand() {
     .option('--no-animation', 'Do not show animated orb', true)
     .action(async (options) => {
       const useAnimation = options.animation === true
-      let terminalActive = false
       const animationTimeoutSeconds = Number(options.animationTimeout)
-      const shouldAutoStopAnimation =
+      const animateForever = !(
         Number.isFinite(animationTimeoutSeconds) && animationTimeoutSeconds > 0
-      const selectedStyle = options.animationStyle
-        ? String(options.animationStyle).trim()
-        : ''
-      const hasSelectedStyle = selectedStyle.length > 0
-      const animationStyle: OrbStyle = hasSelectedStyle
-        ? isOrbStyle(selectedStyle)
-          ? selectedStyle
-          : pickRandomOrbStyle()
-        : pickRandomOrbStyle()
-
-      if (hasSelectedStyle && !isOrbStyle(selectedStyle)) {
-        log.warning(
-          `Unknown animation style "${selectedStyle}". Using random style.`,
-        )
-      }
-
-      if (useAnimation) {
-        process.stdout.write('\x1b[?1049h')
-        process.stdout.write('\x1b[?2026h')
-        process.stdout.write('\x1b[2J\x1b[0;0H')
-        process.stdout.write('\x1b[?25l')
-        if (process.stdin.isTTY) {
-          process.stdin.setRawMode(true)
-          process.stdin.resume()
-          process.stdin.on('data', (data) => {
-            if (data[0] === 3) process.emit('SIGINT', 'SIGINT')
-          })
-        }
-        terminalActive = true
-      }
-
-      const duration = Duration.fromObject({ seconds: options.time }).shiftTo(
-        'days',
-        'hours',
       )
 
-      const start = Date.now()
-      const orb = useAnimation ? new OrbAnimation(animationStyle) : null
-      let animationStopTimer: ReturnType<typeof setTimeout> | null = null
-
-      const cleanupTerminal = () => {
-        if (!terminalActive) return
-        if (process.stdin.isTTY) {
-          process.stdin.setRawMode(false)
-          process.stdin.pause()
-        }
-        process.stdout.write('\x1b[?25h')
-        process.stdout.write('\x1b[?2026l')
-        process.stdout.write('\x1b[?1049l')
-        process.stdout.write('\x1b[0;0H')
-        terminalActive = false
-      }
-
+      const duration = Duration.fromObject({
+        seconds: Number(options.time),
+      }).shiftTo('days', 'hours')
       const statusLines = [
         '\x1b[1;32m STAY AWAKE\x1b[0m',
         '\x1b[1;32m ================\x1b[0m',
         ` Duration: ${duration.toHuman()}`,
+        '\x1b[2m Press Ctrl+C to cancel\x1b[0m',
       ]
-      if (useAnimation) {
-        statusLines.push(` Style: ${animationStyle}`)
-      }
-      statusLines.push('\x1b[2m Press Ctrl+C to cancel\x1b[0m')
 
-      const renderAnimatedScreen = (orbFrame: string) => {
-        const rows = process.stdout.rows || 24
-        const orbLines = orbFrame.split('\n')
-        const orbHeight = orbLines.length
-        const usableRows = Math.max(1, rows)
-        const screenLines = Array.from({ length: usableRows }, () => '')
-
-        const topPadding = Math.max(
-          0,
-          Math.floor((usableRows - orbHeight) / 2) - 2,
-        )
-        for (let i = 0; i < orbHeight; i++) {
-          const lineIndex = topPadding + i
-          if (lineIndex < usableRows) {
-            screenLines[lineIndex] = orbLines[i]
-          }
-        }
-
-        const maxStatusStart = Math.max(0, usableRows - statusLines.length)
-        const statusStart = maxStatusStart
-        for (let i = 0; i < statusLines.length; i++) {
-          const lineIndex = statusStart + i
-          if (lineIndex < usableRows) {
-            screenLines[lineIndex] = statusLines[i]
-          }
-        }
-
-        process.stdout.write(
-          '\x1b[H' + screenLines.map((l) => l + '\x1b[K').join('\n') + '\x1b[J',
-        )
-      }
-
-      if (!useAnimation) {
-        process.stdout.write('\x1b[0;0H\x1b[J' + statusLines.join('\n'))
-      } else {
-        orb!.start(() => {
-          renderAnimatedScreen(orb!.getFrame())
-        })
-
-        if (shouldAutoStopAnimation) {
-          animationStopTimer = setTimeout(() => {
-            orb!.stop()
-          }, animationTimeoutSeconds * 1000)
-        }
-      }
-
-      const resizeHandler = () => {
-        if (!terminalActive || !orb) return
-        // Repaint the (possibly frozen) last frame. The animation render loop
-        // stops after --animation-timeout, so without this a SIGWINCH — e.g.
-        // emitted when the display sleeps and wakes — would clear the alternate
-        // screen with no redraw, leaving a blank terminal.
-        renderAnimatedScreen(orb.getFrame())
-      }
-      if (useAnimation) {
-        process.on('SIGWINCH', resizeHandler)
-      }
-
+      // Start keeping the machine awake immediately, including during the
+      // animation. `caffeinate` is a built-in macOS tool that does the actual
+      // work; everything else here is just presentation.
+      const start = Date.now()
       const caffeinate = execa('caffeinate', ['-disu', '-t', options.time], {
         stdio: 'inherit',
       })
 
-      const sigintHandler = () => {
-        process.off('SIGWINCH', resizeHandler)
-        if (orb) orb.stop()
-        cleanupTerminal()
-
-        readline.cursorTo(process.stdout, 0)
-        readline.clearLine(process.stdout, 0)
-
-        const finalElapsed = Math.floor((Date.now() - start) / 1000)
-        const awakeFor = Duration.fromObject({ seconds: finalElapsed })
+      const quit = () => {
+        const awakeFor = Duration.fromObject({
+          seconds: Math.floor((Date.now() - start) / 1000),
+        })
         log.info(
           `Was kept awake for ${awakeFor.toHuman({ unitDisplay: 'short' })}`,
         )
@@ -177,16 +65,42 @@ export function createStayAwakeCommand() {
         caffeinate.kill('SIGINT')
         process.exit(0)
       }
-      process.on('SIGINT', sigintHandler)
 
-      try {
-        await caffeinate
-      } finally {
-        process.off('SIGINT', sigintHandler)
-        process.off('SIGWINCH', resizeHandler)
-        if (animationStopTimer) clearTimeout(animationStopTimer)
-        if (orb) orb.stop()
-        cleanupTerminal()
+      if (useAnimation) {
+        const requestedStyle = String(options.animationStyle ?? '').trim()
+        if (requestedStyle && !isOrbStyle(requestedStyle)) {
+          log.warning(
+            `Unknown animation style "${requestedStyle}". Using random style.`,
+          )
+        }
+        const animationStyle: OrbStyle = isOrbStyle(requestedStyle)
+          ? requestedStyle
+          : pickRandomOrbStyle()
+
+        // Show the orb fullscreen: animate, then freeze on the last frame and
+        // leave it there. The terminal keeps the alternate screen alive (like
+        // vim/htop), so we just wait until the user cancels or caffeinate ends.
+        const orb = new OrbAnimation(animationStyle)
+        const session = runFullscreenOrb(
+          orb,
+          statusLines,
+          animateForever ? Infinity : animationTimeoutSeconds * 1000,
+        )
+        // Wait until the user cancels or caffeinate's timer elapses. The
+        // `.catch` keeps an abnormal caffeinate exit from throwing here so we
+        // still fall through to the summary.
+        await Promise.race([session.cancelled, caffeinate]).catch(() => {})
+        session.close()
+      } else {
+        // No animation: print the status as plain text, then wait for the user
+        // to cancel or for caffeinate to finish.
+        process.stdout.write('\n' + statusLines.join('\n') + '\n')
+        const sigint = new Promise<void>((resolve) =>
+          process.once('SIGINT', () => resolve()),
+        )
+        await Promise.race([sigint, caffeinate]).catch(() => {})
       }
+
+      quit()
     })
 }

@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spinner } from '@clack/prompts'
-import { execa, ExecaError } from 'execa'
+import { execa, ExecaError, Options } from 'execa'
 import { colorize, exitWithError } from './style'
 
 export type AIProvider = {
@@ -10,14 +10,14 @@ export type AIProvider = {
   run: (prompt: string, input?: string) => Promise<string>
 }
 
-function execOptions(input?: string) {
+function execOptions(input?: string): Pick<Options, 'input' | 'stdin'> {
   if (input !== undefined) {
-    return { input, stdin: 'pipe' as const }
+    return { input, stdin: 'pipe' }
   }
 
   // `codex exec` inspects stdin. If we leave it open with the default pipe,
   // it can wait for extra input instead of just using the prompt argument.
-  return { stdin: 'ignore' as const }
+  return { stdin: 'ignore' }
 }
 
 async function runClaude(prompt: string, input?: string): Promise<string> {

@@ -8,7 +8,9 @@ import { sync } from '#src/stack/sync'
 import { branchDiff } from '#src/stack/diff'
 import { branchLog, type BranchLog } from '#src/stack/log'
 import { branchPr, type PrInfo } from '#src/stack/pr'
+import { track } from '#src/stack/model'
 import { Tree } from './Tree'
+import { CreateModal } from './CreateModal'
 import { DiffPane } from './DiffPane'
 import { LogPane } from './LogPane'
 import { InfoPane } from './InfoPane'
@@ -35,6 +37,8 @@ export function App() {
   const [log, setLog] = useState<LogState>(null)
   const [prs, setPrs] = useState<Record<string, PrInfo | null>>({})
   const [gitDir, setGitDir] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [newBranch, setNewBranch] = useState('')
 
   const busyRef = useRef(busy)
   busyRef.current = busy
@@ -181,8 +185,22 @@ export function App() {
         : 'nothing merged to sync'
     })
 
+  const doCreate = (name: string) => {
+    const trimmed = name.trim()
+    if (!trimmed || !selectedNode) return
+    const parent = selectedNode.name
+    setCreating(false)
+    setNewBranch('')
+    run(`creating ${trimmed}…`, async () => {
+      await execa('git', ['checkout', '-b', trimmed])
+      await track(trimmed, parent)
+      return `created ${trimmed} on ${parent}`
+    })
+  }
+
   useInput((input, key) => {
     if (key.ctrl && input === 'c') return exit()
+    if (creating) return
     if (busy) return
 
     if (input === 'q' || key.escape) return exit()
@@ -207,6 +225,11 @@ export function App() {
     } else if (input === 'R') {
       setPrs({})
       run('refreshing…', async () => 'refreshed')
+    } else if (input === 'n') {
+      if (selectedNode) {
+        setNewBranch('')
+        setCreating(true)
+      }
     }
   })
 
@@ -294,26 +317,38 @@ export function App() {
         />
       </Box>
 
-      {/* Tab panel */}
-      <Box
-        flexGrow={1}
-        flexDirection="column"
-        borderStyle="round"
-        borderColor="gray"
-        paddingX={1}
-      >
-        <Tabs
-          active={right}
-          branch={
-            selectedNode && !selectedNode.isTrunk
-              ? selectedNode.name
-              : undefined
-          }
-        />
-        <Box marginTop={1} flexDirection="column" flexGrow={1}>
-          {tabContent}
+      {/* Tab panel / create modal */}
+      {creating && selectedNode ? (
+        <Box flexGrow={1} flexDirection="column" justifyContent="center" alignItems="center">
+          <CreateModal
+            parent={selectedNode.name}
+            value={newBranch}
+            onChange={setNewBranch}
+            onSubmit={doCreate}
+            onCancel={() => setCreating(false)}
+          />
         </Box>
-      </Box>
+      ) : (
+        <Box
+          flexGrow={1}
+          flexDirection="column"
+          borderStyle="round"
+          borderColor="gray"
+          paddingX={1}
+        >
+          <Tabs
+            active={right}
+            branch={
+              selectedNode && !selectedNode.isTrunk
+                ? selectedNode.name
+                : undefined
+            }
+          />
+          <Box marginTop={1} flexDirection="column" flexGrow={1}>
+            {tabContent}
+          </Box>
+        </Box>
+      )}
 
       {/* Footer */}
       <Box
@@ -328,8 +363,8 @@ export function App() {
         </Box>
         {!compactFooter && (
           <Text dimColor>
-            ↑/↓ move · enter checkout · tab/i/d/l tabs · o open-pr · r restack
-            · s sync · R refresh · q quit
+            ↑/↓ move · enter checkout · n new · tab/i/d/l tabs · o open-pr · r
+            restack · s sync · R refresh · q quit
           </Text>
         )}
       </Box>

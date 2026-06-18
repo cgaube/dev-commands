@@ -2,6 +2,7 @@ import { Command } from 'commander'
 import { log, outro } from '@clack/prompts'
 import { execa } from 'execa'
 import { Duration } from 'luxon'
+import { introTitle } from '#common/style'
 import {
   isOrbStyle,
   ORB_STYLES,
@@ -39,12 +40,8 @@ export function createStayAwakeCommand() {
       const duration = Duration.fromObject({
         seconds: Number(options.time),
       }).shiftTo('days', 'hours')
-      const statusLines = [
-        '\x1b[1;32m STAY AWAKE\x1b[0m',
-        '\x1b[1;32m ================\x1b[0m',
-        ` Duration: ${duration.toHuman()}`,
-        '\x1b[2m Press Ctrl+C to cancel\x1b[0m',
-      ]
+
+      introTitle('Stay Awake')
 
       // Start keeping the machine awake immediately, including during the
       // animation. `caffeinate` is a built-in macOS tool that does the actual
@@ -77,6 +74,13 @@ export function createStayAwakeCommand() {
           ? requestedStyle
           : pickRandomOrbStyle()
 
+        const statusLines = [
+          '\x1b[1;32m STAY AWAKE\x1b[0m',
+          '\x1b[1;32m ================\x1b[0m',
+          ` Duration: ${duration.toHuman()}`,
+          '\x1b[2m Press Ctrl+C to cancel\x1b[0m',
+        ]
+
         // Show the orb fullscreen: animate, then freeze on the last frame and
         // leave it there. The terminal keeps the alternate screen alive (like
         // vim/htop), so we just wait until the user cancels or caffeinate ends.
@@ -92,13 +96,31 @@ export function createStayAwakeCommand() {
         await Promise.race([session.cancelled, caffeinate]).catch(() => {})
         session.close()
       } else {
-        // No animation: print the status as plain text, then wait for the user
-        // to cancel or for caffeinate to finish.
-        process.stdout.write('\n' + statusLines.join('\n') + '\n')
-        const sigint = new Promise<void>((resolve) =>
-          process.once('SIGINT', () => resolve()),
-        )
-        await Promise.race([sigint, caffeinate]).catch(() => {})
+        // No animation: just show the status and wait for the user to cancel
+        // or for caffeinate to finish.
+        log.message(`Duration: ${duration.toHuman()}\nPress Ctrl+C to cancel`)
+
+        const isTTY = process.stdin.isTTY
+        const onData = (data: Buffer) => {
+          if (data[0] === 3) process.emit('SIGINT') // Ctrl+C, without echoing ^C
+        }
+        const cancelled = new Promise<void>((resolve) => {
+          process.once('SIGINT', () => resolve())
+          if (isTTY) {
+            // Raw mode lets us catch Ctrl+C ourselves instead of the terminal
+            // echoing a stray "^C" into the clack output.
+            process.stdin.setRawMode(true)
+            process.stdin.resume()
+            process.stdin.on('data', onData)
+          }
+        })
+        await Promise.race([cancelled, caffeinate]).catch(() => {})
+
+        if (isTTY) {
+          process.stdin.off('data', onData)
+          process.stdin.setRawMode(false)
+          process.stdin.pause()
+        }
       }
 
       quit()

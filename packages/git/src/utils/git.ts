@@ -10,6 +10,17 @@ export async function gitOutput(args: string[]): Promise<string> {
   return stdout.toString()
 }
 
+// Resolve a ref (branch name, sha, HEAD, …) to its full commit sha. Returns
+// null when the ref does not exist instead of throwing, so callers can treat a
+// missing branch as "gone" without a try/catch at every call site.
+export async function resolveSha(ref: string): Promise<string | null> {
+  try {
+    return (await gitOutput(['rev-parse', '--verify', '--quiet', ref])).trim()
+  } catch {
+    return null
+  }
+}
+
 // Clamp a diff to MAX_DIFF_CHARS, appending a marker so the AI provider knows it
 // is seeing only the first portion. Callers decide how to package the text and
 // whether to warn the user, hence the `truncated` flag.

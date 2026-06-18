@@ -17,12 +17,12 @@ export async function isMerged(
 ): Promise<boolean> {
   if (!(await resolveSha(branch))) return true
 
-  const unique = (
-    await gitOutput(['rev-list', '--count', branch, '--not', trunk])
-  ).trim()
-  if (unique === '0') return true
-
   try {
+    const unique = (
+      await gitOutput(['rev-list', '--count', branch, '--not', trunk])
+    ).trim()
+    if (unique === '0') return true
+
     const merged = (
       await gitOutput(['merge-tree', '--write-tree', trunk, branch])
     )
@@ -31,7 +31,6 @@ export async function isMerged(
     const trunkTree = (await gitOutput(['rev-parse', `${trunk}^{tree}`])).trim()
     return merged === trunkTree
   } catch {
-    // merge-tree exits non-zero on conflicts → branch is not cleanly merged.
     return false
   }
 }

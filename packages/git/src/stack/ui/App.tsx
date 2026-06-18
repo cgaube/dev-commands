@@ -65,7 +65,11 @@ export function App() {
   const watchReload = useCallback(async () => {
     if (busyRef.current) return
     setSyncing(true)
-    await reload()
+    try {
+      await reload()
+    } catch {
+      // Branch may have been deleted mid-reload — swallow and retry next tick.
+    }
     setSyncing(false)
   }, [reload])
 

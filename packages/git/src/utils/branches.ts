@@ -1,18 +1,25 @@
 import { execaSync } from 'execa'
 import { select, multiselect } from '@clack/prompts'
 import { picocolors } from '#common/style'
+import { READ_ONLY_GIT_ENV } from './git'
 
 const getCurrentBranch = () => {
-  return execaSync('git', ['rev-parse', '--abbrev-ref', 'HEAD']).stdout.trim()
+  return execaSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+    env: READ_ONLY_GIT_ENV,
+  }).stdout.trim()
 }
 
 const getBranches = () => {
-  const { stdout } = execaSync('git', [
-    'for-each-ref',
-    '--sort=-committerdate',
-    'refs/heads/',
-    '--format=%(refname:short) || %(objectname:short) || %(contents:subject) || %(authorname) || (%(committerdate:relative)) || %(HEAD)',
-  ])
+  const { stdout } = execaSync(
+    'git',
+    [
+      'for-each-ref',
+      '--sort=-committerdate',
+      'refs/heads/',
+      '--format=%(refname:short) || %(objectname:short) || %(contents:subject) || %(authorname) || (%(committerdate:relative)) || %(HEAD)',
+    ],
+    { env: READ_ONLY_GIT_ENV },
+  )
 
   return stdout.split('\n').filter((line) => line.trim() !== '')
 }

@@ -4,7 +4,6 @@
   "type": "module",
   "scripts": {
     "linear": "bun run src/main.ts",
-    "build": "bun run ts:check && bun build src/main.ts --outfile dist/linear",
     "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/linear",
     "compile:watch": "bun run compile --watch",
     "ts:check": "tsc --noEmit"

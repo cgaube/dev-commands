@@ -4,7 +4,10 @@
   "type": "module",
   "scripts": {
     "git": "bun run src/main.ts",
+<<<<<<< Updated upstream
     "build": "bun run ts:check && bun build src/main.ts --outfile dist/git",
+=======
+>>>>>>> Stashed changes
     "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/git",
     "compile:watch": "bun run compile --watch",
     "ts:check": "tsc --noEmit"

@@ -3,7 +3,6 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "bun run ts:check && bun build src/main.ts --outfile dist/run",
     "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/run",
     "compile:watch": "bun run compile --watch",
     "ts:check": "tsc --noEmit"

@@ -31,6 +31,30 @@ function prColor(state: string, isDraft: boolean): string | undefined {
   }
 }
 
+function checksColor(status: string): string {
+  if (status === 'success') return 'green'
+  if (status === 'failure') return 'red'
+  return 'yellow'
+}
+
+function checksLabel(status: string): string {
+  if (status === 'success') return '● passing'
+  if (status === 'failure') return '● failing'
+  return '● pending'
+}
+
+function reviewColor(decision: string): string {
+  if (decision === 'APPROVED') return 'green'
+  if (decision === 'CHANGES_REQUESTED') return 'red'
+  return 'yellow'
+}
+
+function reviewLabel(decision: string): string {
+  if (decision === 'APPROVED') return '✓ approved'
+  if (decision === 'CHANGES_REQUESTED') return '✗ changes requested'
+  return '◌ review required'
+}
+
 function PrRow({ pr }: { pr: PrState }) {
   if (pr === undefined) return null
   return (
@@ -50,6 +74,30 @@ function PrRow({ pr }: { pr: PrState }) {
           {pr.title} <Text dimColor>(o to open)</Text>
         </Text>
       )}
+    </Box>
+  )
+}
+
+function CiRow({ pr }: { pr: PrState }) {
+  if (!pr || pr === 'loading' || !pr.checksStatus) return null
+  return (
+    <Box>
+      <Box width={8}>
+        <Text dimColor>ci</Text>
+      </Box>
+      <Text color={checksColor(pr.checksStatus)}>{checksLabel(pr.checksStatus)}</Text>
+    </Box>
+  )
+}
+
+function ReviewRow({ pr }: { pr: PrState }) {
+  if (!pr || pr === 'loading' || !pr.reviewDecision) return null
+  return (
+    <Box>
+      <Box width={8}>
+        <Text dimColor>review</Text>
+      </Box>
+      <Text color={reviewColor(pr.reviewDecision)}>{reviewLabel(pr.reviewDecision)}</Text>
     </Box>
   )
 }
@@ -78,6 +126,8 @@ export function InfoPane({ node, pr }: { node?: StackNode; pr: PrState }) {
       <Row label="behind" value={String(node.behind)} />
       <Row label="status" value={status} />
       <PrRow pr={pr} />
+      <CiRow pr={pr} />
+      <ReviewRow pr={pr} />
     </Box>
   )
 }

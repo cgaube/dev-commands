@@ -1,5 +1,6 @@
 import { Box, Text } from 'ink'
 import type { FlatNode } from '#src/stack/graph'
+import type { PrInfo } from '#src/stack/pr'
 import { shrinkBranch } from './shrinkBranch'
 
 type Props = {
@@ -7,9 +8,10 @@ type Props = {
   selected: number
   maxRows?: number
   maxWidth?: number
+  prs?: Record<string, PrInfo | null>
 }
 
-export function Tree({ nodes, selected, maxRows, maxWidth }: Props) {
+export function Tree({ nodes, selected, maxRows, maxWidth, prs }: Props) {
   const total = nodes.length
   let start = 0
   let visible = nodes
@@ -45,10 +47,17 @@ export function Tree({ nodes, selected, maxRows, maxWidth }: Props) {
         if (!node.exists) badges.push('[gone]')
         const badgeText = badges.length ? ' ' + badges.join(' ') : ''
 
+        const pr = !node.isTrunk ? prs?.[node.name] : undefined
+        let prBadgeWidth = 0
+        if (pr) {
+          if (pr.checksStatus) prBadgeWidth += 2
+          if (pr.reviewDecision === 'APPROVED' || pr.reviewDecision === 'CHANGES_REQUESTED') prBadgeWidth += 2
+        }
+
         // Prefix: cursor + indent + marker + space
         const prefixLen = cursor.length + indent.length + 2 // marker + space
         const availableForName = maxWidth
-          ? maxWidth - prefixLen - badgeText.length
+          ? maxWidth - prefixLen - badgeText.length - prBadgeWidth
           : Infinity
         const displayName =
           availableForName < node.name.length
@@ -75,6 +84,14 @@ export function Tree({ nodes, selected, maxRows, maxWidth }: Props) {
               <Text color="yellow"> [merged]</Text>
             )}
             {!node.exists && <Text color="red"> [gone]</Text>}
+
+            {pr?.checksStatus && (
+              <Text color={pr.checksStatus === 'success' ? 'green' : pr.checksStatus === 'failure' ? 'red' : 'yellow'}>
+                {' '}●
+              </Text>
+            )}
+            {pr?.reviewDecision === 'APPROVED' && <Text color="green"> ✓</Text>}
+            {pr?.reviewDecision === 'CHANGES_REQUESTED' && <Text color="red"> ✗</Text>}
           </Box>
         )
       })}

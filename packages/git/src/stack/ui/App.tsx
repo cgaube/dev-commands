@@ -43,6 +43,8 @@ export function App() {
   const busyRef = useRef(busy)
   busyRef.current = busy
 
+  const prFetchedRef = useRef(new Set<string>())
+
   const reload = useCallback(async (focusCurrent = false) => {
     const { root, meta } = await buildForest()
     const flat = flatten(root)
@@ -118,6 +120,7 @@ export function App() {
     const name = selectedNode.name
     if (name in prs) return
     let cancelled = false
+    prFetchedRef.current.add(name)
     branchPr(name).then((info) => {
       if (!cancelled) setPrs((m) => ({ ...m, [name]: info }))
     })
@@ -125,6 +128,16 @@ export function App() {
       cancelled = true
     }
   }, [right, selectedNode, prs])
+
+  useEffect(() => {
+    for (const { node } of nodes) {
+      if (node.isTrunk || prFetchedRef.current.has(node.name)) continue
+      prFetchedRef.current.add(node.name)
+      branchPr(node.name).then((info) => {
+        setPrs((m) => ({ ...m, [node.name]: info }))
+      })
+    }
+  }, [nodes])
 
   const run = useCallback(
     async (label: string, fn: () => Promise<string>) => {
@@ -154,6 +167,25 @@ export function App() {
         return `opened PR for ${name}`
       } catch {
         return `no PR found for ${name}`
+      }
+    })
+
+  const push = (name: string) =>
+    run(`pushing ${name}…`, async () => {
+      await execa('git', ['push', '--force-with-lease', '-u', 'origin', name])
+      return `pushed ${name}`
+    })
+
+  const createPr = (name: string, parent: string) =>
+    run(`creating PR for ${name}…`, async () => {
+      await execa('git', ['push', '--force-with-lease', '-u', 'origin', name])
+      try {
+        await execa('gh', ['pr', 'create', '--base', parent, '--web', '--head', name])
+        return `opened PR creation for ${name}`
+      } catch (e: any) {
+        const msg = e.stderr || e.message || String(e)
+        if (msg.includes('already exists')) return `PR already exists — press o to open`
+        throw e
       }
     })
 
@@ -218,12 +250,19 @@ export function App() {
       setRight(TABS.find((t) => t.key === input)!.mode)
     } else if (input === 'o') {
       if (selectedNode && !selectedNode.isTrunk) openPr(selectedNode.name)
+    } else if (input === 'p') {
+      if (selectedNode && !selectedNode.isTrunk) push(selectedNode.name)
+    } else if (input === 'P') {
+      if (selectedNode && !selectedNode.isTrunk && selectedNode.parent) {
+        createPr(selectedNode.name, selectedNode.parent)
+      }
     } else if (input === 'r') {
       doRestack()
     } else if (input === 's') {
       doSync()
     } else if (input === 'R') {
       setPrs({})
+      prFetchedRef.current.clear()
       run('refreshing…', async () => 'refreshed')
     } else if (input === 'n') {
       if (selectedNode) {
@@ -314,6 +353,7 @@ export function App() {
           selected={selected}
           maxRows={treeRows}
           maxWidth={innerWidth}
+          prs={prs}
         />
       </Box>
 
@@ -363,8 +403,8 @@ export function App() {
         </Box>
         {!compactFooter && (
           <Text dimColor>
-            ↑/↓ move · enter checkout · n new · tab/i/d/l tabs · o open-pr · r
-            restack · s sync · R refresh · q quit
+            ↑/↓ move · enter checkout · n new · p push · P create-pr · o
+            open-pr · r restack · s sync · R refresh · q quit
           </Text>
         )}
       </Box>

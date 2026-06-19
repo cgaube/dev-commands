@@ -9,10 +9,10 @@
     "ts:check": "tsc --noEmit"
   },
   "dependencies": {
-    "@clack/prompts": "^1.2.0",
+    "@clack/prompts": "^1.5.1",
     "@types/luxon": "^3.7.1",
     "colorize-template": "^1.0.0",
-    "commander": "^14.0.3",
+    "commander": "^15.0.0",
     "execa": "^9.6.1",
     "luxon": "^3.7.2",
     "picocolors": "^1.1.1"

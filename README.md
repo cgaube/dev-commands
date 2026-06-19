@@ -14,11 +14,16 @@ companion projects:
 - **[cgaube/homebrew-devcommands](https://github.com/cgaube/homebrew-devcommands)**
   — the Homebrew tap used to install/update the individual packages.
 
-Typical install flow:
+Typical installation flow:
 
 ```bash
-brew tap cgaube/devcommands
-brew install devcommand-packages
+# 1. Trust the custom taps (Required for Homebrew 6.0+)
+brew trust cgaube/devcommands oven-sh/bun
+
+# 2. Install the package manager
+brew install cgaube/devcommands/devcommand-packages
+
+# 3. Initialize your dev tools
 dev packages install git linear utils
 ```
 

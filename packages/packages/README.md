@@ -6,6 +6,10 @@ tap.
 ## Install
 
 ```bash
+# 1. Trust the custom taps (Required for Homebrew 6.0+)
+brew trust cgaube/devcommands oven-sh/bun
+
+# 2. Install the package manager
 brew install cgaube/devcommands/devcommand-packages
 ```
 

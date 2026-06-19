@@ -10,9 +10,9 @@
     "ts:check": "tsc --noEmit"
   },
   "dependencies": {
-    "@clack/prompts": "^1.2.0",
+    "@clack/prompts": "^1.5.1",
     "colorize-template": "^1.0.0",
-    "commander": "^14.0.3",
+    "commander": "^15.0.0",
     "execa": "^9.6.1",
     "ink": "^7.1.0",
     "ink-text-input": "^6.0.0",

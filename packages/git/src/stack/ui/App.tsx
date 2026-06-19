@@ -180,11 +180,20 @@ export function App() {
     run(`creating PR for ${name}…`, async () => {
       await execa('git', ['push', '--force-with-lease', '-u', 'origin', name])
       try {
-        await execa('gh', ['pr', 'create', '--base', parent, '--web', '--head', name])
+        await execa('gh', [
+          'pr',
+          'create',
+          '--base',
+          parent,
+          '--web',
+          '--head',
+          name,
+        ])
         return `opened PR creation for ${name}`
       } catch (e: any) {
         const msg = e.stderr || e.message || String(e)
-        if (msg.includes('already exists')) return `PR already exists — press o to open`
+        if (msg.includes('already exists'))
+          return `PR already exists — press o to open`
         throw e
       }
     })
@@ -281,7 +290,10 @@ export function App() {
 
   // Tree content: "Stack" label (1) + branch rows. Cap at 40% of budget.
   const treeNatural = 1 + nodes.length
-  const treeContent = Math.max(3, Math.min(treeNatural, Math.floor(contentBudget * 0.4)))
+  const treeContent = Math.max(
+    3,
+    Math.min(treeNatural, Math.floor(contentBudget * 0.4)),
+  )
   const treeRows = Math.max(2, treeContent - 1)
 
   // Pane content: tab strip (1) + margin (1) + visible lines.
@@ -331,8 +343,7 @@ export function App() {
         justifyContent="space-between"
       >
         <Text bold color="cyan">
-          dev stack{' '}
-          {syncing && <Text color="yellow">{spinner}</Text>}
+          dev stack {syncing && <Text color="yellow">{spinner}</Text>}
         </Text>
         <Text dimColor>
           trunk: {trunk} · {nodes.length} branches
@@ -359,7 +370,12 @@ export function App() {
 
       {/* Tab panel / create modal */}
       {creating && selectedNode ? (
-        <Box flexGrow={1} flexDirection="column" justifyContent="center" alignItems="center">
+        <Box
+          flexGrow={1}
+          flexDirection="column"
+          justifyContent="center"
+          alignItems="center"
+        >
           <CreateModal
             parent={selectedNode.name}
             value={newBranch}
@@ -403,8 +419,8 @@ export function App() {
         </Box>
         {!compactFooter && (
           <Text dimColor>
-            ↑/↓ move · enter checkout · n new · p push · P create-pr · o
-            open-pr · r restack · s sync · R refresh · q quit
+            ↑/↓ move · enter checkout · n new · p push · P create-pr · o open-pr
+            · r restack · s sync · R refresh · q quit
           </Text>
         )}
       </Box>

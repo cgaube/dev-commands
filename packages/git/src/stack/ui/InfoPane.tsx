@@ -85,7 +85,9 @@ function CiRow({ pr }: { pr: PrState }) {
       <Box width={8}>
         <Text dimColor>ci</Text>
       </Box>
-      <Text color={checksColor(pr.checksStatus)}>{checksLabel(pr.checksStatus)}</Text>
+      <Text color={checksColor(pr.checksStatus)}>
+        {checksLabel(pr.checksStatus)}
+      </Text>
     </Box>
   )
 }
@@ -97,7 +99,9 @@ function ReviewRow({ pr }: { pr: PrState }) {
       <Box width={8}>
         <Text dimColor>review</Text>
       </Box>
-      <Text color={reviewColor(pr.reviewDecision)}>{reviewLabel(pr.reviewDecision)}</Text>
+      <Text color={reviewColor(pr.reviewDecision)}>
+        {reviewLabel(pr.reviewDecision)}
+      </Text>
     </Box>
   )
 }

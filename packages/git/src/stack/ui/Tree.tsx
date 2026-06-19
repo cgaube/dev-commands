@@ -42,7 +42,11 @@ export function Tree({ nodes, selected, maxRows, maxWidth, prs }: Props) {
         if (node.behind > 0) badges.push(`-${node.behind}`)
         if (node.isDirty) badges.push('*')
         if (node.isCurrent) badges.push('[current]')
-        if (!node.isTrunk && node.isMerged && (node.ahead > 0 || node.behind > 0))
+        if (
+          !node.isTrunk &&
+          node.isMerged &&
+          (node.ahead > 0 || node.behind > 0)
+        )
           badges.push('[merged]')
         if (!node.exists) badges.push('[gone]')
         const badgeText = badges.length ? ' ' + badges.join(' ') : ''
@@ -51,7 +55,11 @@ export function Tree({ nodes, selected, maxRows, maxWidth, prs }: Props) {
         let prBadgeWidth = 0
         if (pr) {
           if (pr.checksStatus) prBadgeWidth += 2
-          if (pr.reviewDecision === 'APPROVED' || pr.reviewDecision === 'CHANGES_REQUESTED') prBadgeWidth += 2
+          if (
+            pr.reviewDecision === 'APPROVED' ||
+            pr.reviewDecision === 'CHANGES_REQUESTED'
+          )
+            prBadgeWidth += 2
         }
 
         // Prefix: cursor + indent + marker + space
@@ -80,18 +88,31 @@ export function Tree({ nodes, selected, maxRows, maxWidth, prs }: Props) {
 
             {node.isDirty && <Text color="yellow"> *</Text>}
             {node.isCurrent && <Text color="cyan"> [current]</Text>}
-            {!node.isTrunk && node.isMerged && (node.ahead > 0 || node.behind > 0) && (
-              <Text color="yellow"> [merged]</Text>
-            )}
+            {!node.isTrunk &&
+              node.isMerged &&
+              (node.ahead > 0 || node.behind > 0) && (
+                <Text color="yellow"> [merged]</Text>
+              )}
             {!node.exists && <Text color="red"> [gone]</Text>}
 
             {pr?.checksStatus && (
-              <Text color={pr.checksStatus === 'success' ? 'green' : pr.checksStatus === 'failure' ? 'red' : 'yellow'}>
-                {' '}●
+              <Text
+                color={
+                  pr.checksStatus === 'success'
+                    ? 'green'
+                    : pr.checksStatus === 'failure'
+                      ? 'red'
+                      : 'yellow'
+                }
+              >
+                {' '}
+                ●
               </Text>
             )}
             {pr?.reviewDecision === 'APPROVED' && <Text color="green"> ✓</Text>}
-            {pr?.reviewDecision === 'CHANGES_REQUESTED' && <Text color="red"> ✗</Text>}
+            {pr?.reviewDecision === 'CHANGES_REQUESTED' && (
+              <Text color="red"> ✗</Text>
+            )}
           </Box>
         )
       })}

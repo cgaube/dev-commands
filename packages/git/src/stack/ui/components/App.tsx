@@ -241,7 +241,7 @@ export function App() {
     setCreating(false)
     setNewBranch('')
     run(`creating ${trimmed}…`, async () => {
-      await execa('git', ['checkout', '-b', trimmed])
+      await execa('git', ['checkout', '-b', trimmed, parent])
       await track(trimmed, parent)
       return `created ${trimmed} on ${parent}`
     })

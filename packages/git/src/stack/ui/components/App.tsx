@@ -15,9 +15,11 @@ import { DiffPane } from './DiffPane'
 import { LogPane } from './LogPane'
 import { InfoPane } from './InfoPane'
 import { Tabs, TABS, type TabMode } from './Tabs'
-import { useTerminalSize } from './useTerminalSize'
-import { useGitWatch } from './useGitWatch'
-import { useSpinner } from './useSpinner'
+import { Legend } from './Legend'
+import { useTerminalSize } from '../hooks/useTerminalSize'
+import { useMeasuredHeight } from '../hooks/useMeasuredHeight'
+import { useGitWatch } from '../hooks/useGitWatch'
+import Spinner from 'ink-spinner'
 
 type DiffState = { text: string; truncated: boolean } | null
 type LogState = BranchLog | null
@@ -44,6 +46,12 @@ export function App() {
   busyRef.current = busy
 
   const prFetchedRef = useRef(new Set<string>())
+
+  // Flexbox lays out the chrome (header, status, legend) and the two content
+  // boxes; these hooks read back the height each content box was actually given
+  // so the tree and panes know how many rows they may render.
+  const [treeRef, treeRows] = useMeasuredHeight()
+  const [paneRef, paneLines] = useMeasuredHeight()
 
   const reload = useCallback(async (focusCurrent = false) => {
     const { root, meta } = await buildForest()
@@ -81,9 +89,9 @@ export function App() {
 
   useGitWatch(gitDir, watchReload)
 
-  const spinner = useSpinner(syncing)
-
   const selectedNode = nodes[selected]?.node
+  const currentBranch = nodes.find(({ node }) => node.isCurrent)?.node.name
+  const hasTrackedBranches = nodes.some(({ node }) => !node.isTrunk)
 
   useEffect(() => {
     if (right !== 'diff' || !selectedNode || selectedNode.isTrunk) {
@@ -281,24 +289,9 @@ export function App() {
     }
   })
 
-  // Each bordered box costs 2 rows (top + bottom border).
-  // Header(3) + tree borders(2) + pane borders(2) + footer(3 or 4).
-  // On very small terminals, collapse the shortcut hints to save a row.
-  const compactFooter = rows < 20
-  const fixedChrome = 3 + 2 + 2 + (compactFooter ? 3 : 4)
-  const contentBudget = Math.max(6, rows - fixedChrome)
-
-  // Tree content: "Stack" label (1) + branch rows. Cap at 40% of budget.
-  const treeNatural = 1 + nodes.length
-  const treeContent = Math.max(
-    3,
-    Math.min(treeNatural, Math.floor(contentBudget * 0.4)),
-  )
-  const treeRows = Math.max(2, treeContent - 1)
-
-  // Pane content: tab strip (1) + margin (1) + visible lines.
-  const paneContent = Math.max(3, contentBudget - treeContent)
-  const paneLines = Math.max(1, paneContent - 2)
+  // The tree sizes to its branches but never takes more than ~40% of the screen;
+  // beyond that it scrolls (overflow is clipped and Tree shows "↑/↓ N more").
+  const treeMaxHeight = Math.max(4, Math.floor(rows * 0.4))
 
   // Inner width available for tree content (inside border + paddingX=1).
   const innerWidth = cols - 4 // 2 border chars + 2 padding chars
@@ -334,7 +327,14 @@ export function App() {
   }
 
   return (
-    <Box flexDirection="column" width={cols} height={rows}>
+    <Box
+      gap={0}
+      flexDirection="column"
+      height={rows}
+      width="100%"
+      paddingX={1}
+      paddingY={0}
+    >
       {/* Header */}
       <Box
         borderStyle="round"
@@ -343,29 +343,49 @@ export function App() {
         justifyContent="space-between"
       >
         <Text bold color="cyan">
-          dev stack {syncing && <Text color="yellow">{spinner}</Text>}
+          dev stack
         </Text>
         <Text dimColor>
-          trunk: {trunk} · {nodes.length} branches
+          trunk: {trunk} · {nodes.length} branches · current: {currentBranch}
         </Text>
       </Box>
 
-      {/* Tree */}
+      {/* Tree — sizes to its content up to treeMaxHeight, then clips and scrolls */}
       <Box
         flexDirection="column"
         borderStyle="round"
         borderColor="gray"
         paddingX={1}
-        height={treeContent + 2}
+        flexShrink={0}
+        maxHeight={treeMaxHeight}
+        overflow="hidden"
       >
-        <Text bold>Stack</Text>
-        <Tree
-          nodes={nodes}
-          selected={selected}
-          maxRows={treeRows}
-          maxWidth={innerWidth}
-          prs={prs}
-        />
+        <Box justifyContent="space-between">
+          <Text bold>Stack</Text>
+          {syncing && (
+            <Text color="blue">
+              <Spinner type="arc" /> syncing
+            </Text>
+          )}
+        </Box>
+        <Box
+          ref={treeRef}
+          flexDirection="column"
+          flexGrow={1}
+          minHeight={0}
+          overflow="hidden"
+        >
+          <Tree
+            nodes={nodes}
+            selected={selected}
+            maxRows={treeRows}
+            maxWidth={innerWidth}
+            prs={prs}
+          />
+          {!hasTrackedBranches && (
+            <Text dimColor>no tracked branches — press n to create one</Text>
+          )}
+        </Box>
       </Box>
 
       {/* Tab panel / create modal */}
@@ -391,39 +411,36 @@ export function App() {
           borderStyle="round"
           borderColor="gray"
           paddingX={1}
+          minHeight={0}
+          overflow="hidden"
         >
-          <Tabs
-            active={right}
-            branch={
-              selectedNode && !selectedNode.isTrunk
-                ? selectedNode.name
-                : undefined
-            }
-          />
-          <Box marginTop={1} flexDirection="column" flexGrow={1}>
+          <Tabs active={right} />
+          <Box
+            ref={paneRef}
+            marginTop={1}
+            flexDirection="column"
+            flexGrow={1}
+            minHeight={0}
+            overflow="hidden"
+          >
             {tabContent}
           </Box>
         </Box>
       )}
 
-      {/* Footer */}
-      <Box
-        flexDirection="column"
-        borderStyle="round"
-        borderColor="gray"
-        paddingX={1}
-      >
-        <Box>
-          <Text color={busy ? 'yellow' : 'green'}>{busy ? '⏳ ' : '› '}</Text>
-          <Text>{status}</Text>
-        </Box>
-        {!compactFooter && (
-          <Text dimColor>
-            ↑/↓ move · enter checkout · n new · p push · P create-pr · o open-pr
-            · r restack · s sync · R refresh · q quit
+      {/* Status bar */}
+      <Box borderStyle="round" borderColor="gray" paddingX={1}>
+        {busy ? (
+          <Text color="yellow">
+            <Spinner type="dots" />{' '}
           </Text>
+        ) : (
+          <Text color="green">› </Text>
         )}
+        <Text>{status}</Text>
       </Box>
+
+      <Legend />
     </Box>
   )
 }

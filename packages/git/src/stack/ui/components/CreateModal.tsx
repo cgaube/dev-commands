@@ -27,6 +27,7 @@ export function CreateModal({
       borderColor="cyan"
       paddingX={1}
       paddingY={0}
+      width="75%"
     >
       <Text bold color="cyan">
         New branch

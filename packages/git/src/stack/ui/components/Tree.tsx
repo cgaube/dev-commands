@@ -1,7 +1,7 @@
 import { Box, Text } from 'ink'
 import type { FlatNode } from '#src/stack/graph'
 import type { PrInfo } from '#src/stack/pr'
-import { shrinkBranch } from './shrinkBranch'
+import { shrinkBranch } from '../utils/shrinkBranch'
 
 type Props = {
   nodes: FlatNode[]
@@ -36,12 +36,13 @@ export function Tree({ nodes, selected, maxRows, maxWidth, prs }: Props) {
         const cursor = isSelected ? '❯ ' : '  '
         const marker = node.isCurrent ? '●' : node.isTrunk ? '⌂' : '○'
 
-        // Badge text: ahead/behind counts and status tags.
+        // Badge text: ahead/behind counts and status tags. "current" is not
+        // badged — the green ● marker already signals it, so a [current] tag
+        // would just be noise on the row you most want to read cleanly.
         const badges: string[] = []
         if (node.ahead > 0) badges.push(`+${node.ahead}`)
         if (node.behind > 0) badges.push(`-${node.behind}`)
         if (node.isDirty) badges.push('*')
-        if (node.isCurrent) badges.push('[current]')
         if (
           !node.isTrunk &&
           node.isMerged &&
@@ -87,7 +88,6 @@ export function Tree({ nodes, selected, maxRows, maxWidth, prs }: Props) {
             {node.behind > 0 && <Text color="red"> -{node.behind}</Text>}
 
             {node.isDirty && <Text color="yellow"> *</Text>}
-            {node.isCurrent && <Text color="cyan"> [current]</Text>}
             {!node.isTrunk &&
               node.isMerged &&
               (node.ahead > 0 || node.behind > 0) && (

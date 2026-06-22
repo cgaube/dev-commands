@@ -1,4 +1,5 @@
 import { Box, Text } from 'ink'
+import { Kbd } from './Kbd'
 
 export type TabMode = 'info' | 'diff' | 'log'
 
@@ -11,9 +12,8 @@ export const TABS: { key: string; label: string; mode: TabMode }[] = [
 ]
 
 // Tab strip rendered at the top of the right panel. The active tab is
-// highlighted; each tab shows its shortcut key. The selected branch (if any) is
-// shown on the right so the panes themselves don't need their own titles.
-export function Tabs({ active, branch }: { active: TabMode; branch?: string }) {
+// highlighted; each tab shows its shortcut key.
+export function Tabs({ active }: { active: TabMode }) {
   return (
     <Box justifyContent="space-between">
       <Box>
@@ -21,19 +21,19 @@ export function Tabs({ active, branch }: { active: TabMode; branch?: string }) {
           const isActive = tab.mode === active
           return (
             <Box key={tab.mode} marginRight={2}>
+              <Kbd>{tab.key}</Kbd>
               <Text
                 color={isActive ? 'cyan' : 'gray'}
                 bold={isActive}
                 underline={isActive}
               >
+                {' '}
                 {tab.label}
               </Text>
-              <Text dimColor> {tab.key}</Text>
             </Box>
           )
         })}
       </Box>
-      {branch ? <Text dimColor>{branch}</Text> : null}
     </Box>
   )
 }

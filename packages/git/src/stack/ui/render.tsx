@@ -1,5 +1,5 @@
 import { render } from 'ink'
-import { App } from './App'
+import { App } from './components/App'
 
 // Launch the stack TUI inside the terminal's alternate screen buffer so the
 // full-screen UI doesn't clobber the user's scrollback, restoring it on exit.

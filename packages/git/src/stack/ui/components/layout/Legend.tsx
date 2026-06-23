@@ -1,5 +1,5 @@
 import { Box, Text } from 'ink'
-import { Kbd } from './Kbd'
+import { Kbd } from '../Kbd'
 
 // Keyboard shortcuts shown in the legend bar, in display order.
 const HINTS: [key: string, action: string][] = [
@@ -19,9 +19,15 @@ const HINTS: [key: string, action: string][] = [
 // terminal width.
 export function Legend() {
   return (
-    <Box borderStyle="round" borderColor="gray" justifyContent="center">
+    <Box
+      justifyContent="center"
+      columnGap={1}
+      flexWrap={'wrap'}
+      paddingX={1}
+      marginBottom={1}
+    >
       {HINTS.map(([key, action]) => (
-        <Box key={key} marginRight={2}>
+        <Box key={key}>
           <Kbd>{key}</Kbd>
           <Text dimColor> {action}</Text>
         </Box>

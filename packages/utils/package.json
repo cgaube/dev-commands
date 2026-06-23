@@ -9,8 +9,8 @@
     "ts:check": "tsc --noEmit"
   },
   "dependencies": {
-    "@clack/prompts": "^1.5.1",
-    "@types/luxon": "^3.7.1",
+    "@clack/prompts": "^1.6.0",
+    "@types/luxon": "^3.7.2",
     "colorize-template": "^1.0.0",
     "commander": "^15.0.0",
     "execa": "^9.6.1",

@@ -1,0 +1,26 @@
+import { Box, Text } from 'ink'
+
+type Props = {
+  trunk: string
+  branchCount: number
+  currentBranch?: string
+}
+
+// Title bar: the app name and a one-line summary of the current stack.
+export function Header({ trunk, branchCount, currentBranch }: Props) {
+  return (
+    <Box
+      borderStyle="round"
+      borderColor="cyan"
+      paddingX={1}
+      justifyContent="space-between"
+    >
+      <Text bold color="cyan">
+        dev stack
+      </Text>
+      <Text dimColor>
+        trunk: {trunk} · {branchCount} branches · current: {currentBranch}
+      </Text>
+    </Box>
+  )
+}

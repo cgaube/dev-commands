@@ -83,7 +83,7 @@ export function useStackData() {
     setSyncing(false)
   }, [reload])
 
-  useGitWatch(gitDir, watchReload)
+  useGitWatch(gitDir, watchReload, () => busyRef.current)
 
   const selectedNode = nodes[selected]?.node
   const currentBranch = nodes.find(({ node }) => node.isCurrent)?.node.name

@@ -1,14 +1,11 @@
 import { Box, Text } from 'ink'
 import { Kbd } from './Kbd'
 
-export type TabMode = 'info' | 'diff' | 'log'
+export type TabMode = 'info' | 'log'
 
-// The tabs available in the right panel, in display order. The `key` is the
-// shortcut that activates each tab (handled in App's input handler).
 export const TABS: { key: string; label: string; mode: TabMode }[] = [
   { key: 'i', label: 'Info', mode: 'info' },
   { key: 'l', label: 'Log', mode: 'log' },
-  { key: 'd', label: 'Diff', mode: 'diff' },
 ]
 
 // Tab strip rendered at the top of the right panel. The active tab is

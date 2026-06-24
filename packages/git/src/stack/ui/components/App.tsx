@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { Box, useApp, useInput } from 'ink'
-import { branchDiff } from '#src/stack/diff'
 import { branchLog } from '#src/stack/log'
 import { branchPr, type PrInfo } from '#src/stack/pr'
 import { CreateModal } from './CreateModal'
@@ -42,11 +41,6 @@ export function App() {
 
   const prFetchedRef = useRef(new Set<string>())
 
-  const diff = useBranchPane(
-    right === 'diff' && !!selectedNode && !selectedNode.isTrunk,
-    selectedNode?.name,
-    branchDiff,
-  )
   const log = useBranchPane(right === 'log', selectedNode?.name, branchLog)
 
   // PRs for every tracked branch are fetched in bulk below whenever the node
@@ -170,7 +164,6 @@ export function App() {
         <ContentArea
           right={right}
           selectedNode={selectedNode}
-          diff={diff}
           log={log}
           pr={prState}
         />

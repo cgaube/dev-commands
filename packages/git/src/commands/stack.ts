@@ -98,15 +98,9 @@ function createLogCommand() {
       for (const { node, depth } of flatten(root)) {
         const indent = '  '.repeat(depth)
         const marker = node.isCurrent ? picocolors.green('●') : '○'
-        const counts = [
-          node.ahead ? picocolors.green(`+${node.ahead}`) : '',
-          node.behind ? picocolors.red(`-${node.behind}`) : '',
-        ]
-          .filter(Boolean)
-          .join(' ')
+        const counts = node.ahead ? picocolors.green(`+${node.ahead}`) : ''
         const tags = [
           node.isCurrent ? picocolors.cyan('[current]') : '',
-          !node.isTrunk && node.isMerged ? picocolors.yellow('[merged]') : '',
           !node.exists ? picocolors.red('[gone]') : '',
         ]
           .filter(Boolean)

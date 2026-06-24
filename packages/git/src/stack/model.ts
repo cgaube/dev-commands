@@ -90,6 +90,22 @@ export async function track(
   return setParent(branch, parent, sha)
 }
 
+export async function rename(
+  oldName: string,
+  newName: string,
+): Promise<StackMeta> {
+  const meta = await readMeta()
+  const entry = meta.branches[oldName]
+  if (!entry) throw new Error(`${oldName} is not tracked`)
+  meta.branches[newName] = entry
+  delete meta.branches[oldName]
+  for (const info of Object.values(meta.branches)) {
+    if (info.parent === oldName) info.parent = newName
+  }
+  await writeMeta(meta)
+  return meta
+}
+
 export async function untrack(branch: string): Promise<StackMeta> {
   const meta = await readMeta()
   delete meta.branches[branch]

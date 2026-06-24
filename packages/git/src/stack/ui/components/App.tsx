@@ -3,6 +3,7 @@ import { Box, useApp, useInput } from 'ink'
 import { branchLog } from '#src/stack/log'
 import { branchPr, type PrInfo } from '#src/stack/pr'
 import { CreateModal } from './CreateModal'
+import { RenameModal } from './RenameModal'
 import { TABS, type TabMode } from './Tabs'
 import { Header } from './layout/Header'
 import { StackPane } from './layout/StackPane'
@@ -37,6 +38,7 @@ export function App() {
   const [right, setRight] = useState<TabMode>('info')
   const [prs, setPrs] = useState<Record<string, PrInfo | null>>({})
   const [creating, setCreating] = useState(false)
+  const [renaming, setRenaming] = useState(false)
   const [newBranch, setNewBranch] = useState('')
 
   const prFetchedRef = useRef(new Set<string>())
@@ -63,9 +65,17 @@ export function App() {
     actions.create(trimmed, selectedNode.name)
   }
 
+  const doRename = (name: string) => {
+    const trimmed = name.trim()
+    if (!trimmed || !selectedNode) return
+    setRenaming(false)
+    setNewBranch('')
+    actions.rename(selectedNode.name, trimmed)
+  }
+
   useInput((input, key) => {
     if (key.ctrl && input === 'c') return exit()
-    if (creating) return
+    if (creating || renaming) return
     if (busy) return
 
     if (input === 'q' || key.escape) return exit()
@@ -102,6 +112,11 @@ export function App() {
       if (selectedNode) {
         setNewBranch('')
         setCreating(true)
+      }
+    } else if (input === 'm') {
+      if (selectedNode && !selectedNode.isTrunk) {
+        setNewBranch(selectedNode.name)
+        setRenaming(true)
       }
     }
   })
@@ -158,6 +173,21 @@ export function App() {
             onChange={setNewBranch}
             onSubmit={doCreate}
             onCancel={() => setCreating(false)}
+          />
+        </Box>
+      ) : renaming && selectedNode ? (
+        <Box
+          flexGrow={1}
+          flexDirection="column"
+          justifyContent="center"
+          alignItems="center"
+        >
+          <RenameModal
+            branch={selectedNode.name}
+            value={newBranch}
+            onChange={setNewBranch}
+            onSubmit={doRename}
+            onCancel={() => setRenaming(false)}
           />
         </Box>
       ) : (

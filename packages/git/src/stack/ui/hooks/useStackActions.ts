@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { execa } from 'execa'
 import { restack } from '#src/stack/restack'
 import { sync } from '#src/stack/sync'
-import { track } from '#src/stack/model'
+import { track, rename } from '#src/stack/model'
 
 type Run = (label: string, fn: () => Promise<string>) => Promise<void>
 
@@ -101,6 +101,13 @@ export function useStackActions(run: Run, trunk: string) {
           await execa('git', ['checkout', '-b', name, parent])
           await track(name, parent)
           return `created ${name} on ${parent}`
+        }),
+
+      rename: (oldName: string, newName: string) =>
+        run(`renaming ${oldName}…`, async () => {
+          await execa('git', ['branch', '-m', oldName, newName])
+          await rename(oldName, newName)
+          return `renamed ${oldName} → ${newName}`
         }),
     }),
     [run, trunk],

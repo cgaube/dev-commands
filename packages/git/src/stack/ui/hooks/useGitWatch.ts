@@ -11,19 +11,25 @@ const TARGETS: Array<[path: string, options?: WatchOptions]> = [
 export function useGitWatch(
   gitDir: string | null,
   onChanged: () => void,
+  isBusy?: () => boolean,
   debounceMs = 300,
 ) {
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  // Keep the latest callback in a ref so the effect re-subscribes only when
-  // gitDir changes, not on every render that passes a new onChanged identity.
+  // Keep the latest callback/predicate in refs so the effect re-subscribes only
+  // when gitDir changes, not on every render that passes new identities.
   const onChangedRef = useRef(onChanged)
   onChangedRef.current = onChanged
+  const isBusyRef = useRef(isBusy)
+  isBusyRef.current = isBusy
 
   useEffect(() => {
     if (!gitDir) return
 
     const fire = () => {
+      // Ignore changes we caused ourselves: an in-flight operation reloads on
+      // completion, so reacting here would just double the work and flicker.
+      if (isBusyRef.current?.()) return
       clearTimeout(timer.current)
       timer.current = setTimeout(() => onChangedRef.current(), debounceMs)
     }

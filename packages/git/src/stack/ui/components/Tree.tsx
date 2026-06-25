@@ -36,19 +36,9 @@ export function Tree({ nodes, selected, maxRows, maxWidth, prs }: Props) {
         const cursor = isSelected ? '❯ ' : '  '
         const marker = node.isCurrent ? '●' : node.isTrunk ? '⌂' : '○'
 
-        // Badge text: ahead/behind counts and status tags. "current" is not
-        // badged — the green ● marker already signals it, so a [current] tag
-        // would just be noise on the row you most want to read cleanly.
         const badges: string[] = []
         if (node.ahead > 0) badges.push(`+${node.ahead}`)
-        if (node.behind > 0) badges.push(`-${node.behind}`)
         if (node.isDirty) badges.push('*')
-        if (
-          !node.isTrunk &&
-          node.isMerged &&
-          (node.ahead > 0 || node.behind > 0)
-        )
-          badges.push('[merged]')
         if (!node.exists) badges.push('[gone]')
         const badgeText = badges.length ? ' ' + badges.join(' ') : ''
 
@@ -85,14 +75,8 @@ export function Tree({ nodes, selected, maxRows, maxWidth, prs }: Props) {
             </Text>
 
             {node.ahead > 0 && <Text color="green"> +{node.ahead}</Text>}
-            {node.behind > 0 && <Text color="red"> -{node.behind}</Text>}
 
             {node.isDirty && <Text color="yellow"> *</Text>}
-            {!node.isTrunk &&
-              node.isMerged &&
-              (node.ahead > 0 || node.behind > 0) && (
-                <Text color="yellow"> [merged]</Text>
-              )}
             {!node.exists && <Text color="red"> [gone]</Text>}
 
             {pr?.checksStatus && (

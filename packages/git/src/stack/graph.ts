@@ -1,17 +1,13 @@
-import { gitOutput, resolveSha } from '#src/utils/git'
-import { getCurrentBranch } from '#src/utils/branches'
+import { gitOutput } from '#src/utils/git'
 import { readMeta, type StackMeta } from './model'
-import { isMerged } from './sync'
 
 export type StackNode = {
   name: string
   parent: string | null
   children: StackNode[]
   ahead: number
-  behind: number
   isCurrent: boolean
   isTrunk: boolean
-  isMerged: boolean
   isDirty: boolean
   exists: boolean
 }
@@ -23,79 +19,86 @@ async function isWorkingTreeDirty(): Promise<boolean> {
   return out.split(/\r?\n/).some((l) => l.trim().length > 0)
 }
 
-// Commits the branch has that its base doesn't (ahead) and vice-versa (behind).
-// `git rev-list --left-right --count base...branch` prints "behind<TAB>ahead".
-async function aheadBehind(
-  base: string,
-  branch: string,
-): Promise<{ ahead: number; behind: number }> {
+async function commitCount(base: string, branch: string): Promise<number> {
   try {
     const out = (
-      await gitOutput([
-        'rev-list',
-        '--left-right',
-        '--count',
-        `${base}...${branch}`,
-      ])
+      await gitOutput(['rev-list', '--count', `${base}..${branch}`])
     ).trim()
-    const [behind, ahead] = out.split(/\s+/).map((n) => Number(n) || 0)
-    return { ahead, behind }
+    return Number(out) || 0
   } catch {
-    return { ahead: 0, behind: 0 }
+    return 0
   }
 }
 
-// Build the stack forest rooted at trunk. Every tracked branch becomes a node;
-// branches whose parent isn't tracked hang directly under trunk so nothing is
-// hidden (e.g. an orphan left after its parent was pruned).
+// Name of the branch HEAD points at. Async (unlike the shared getCurrentBranch,
+// which spawns synchronously and would block the event loop on every reload).
+async function currentBranch(): Promise<string> {
+  return (await gitOutput(['rev-parse', '--abbrev-ref', 'HEAD'])).trim()
+}
+
+// Sha of every local branch in a single call, replacing a `rev-parse` per
+// branch and per recorded parent.
+async function branchShas(): Promise<Map<string, string>> {
+  const out = await gitOutput([
+    'for-each-ref',
+    '--format=%(refname:short) %(objectname)',
+    'refs/heads',
+  ])
+  const shas = new Map<string, string>()
+  for (const line of out.split('\n')) {
+    const sep = line.indexOf(' ')
+    if (sep === -1) continue
+    shas.set(line.slice(0, sep), line.slice(sep + 1))
+  }
+  return shas
+}
+
 export async function buildForest(
   meta?: StackMeta,
 ): Promise<{ root: StackNode; meta: StackMeta }> {
   const data = meta ?? (await readMeta())
-  const current = getCurrentBranch()
   const tracked = new Set(Object.keys(data.branches))
 
-  const dirty = await isWorkingTreeDirty()
+  const [current, dirty, shas] = await Promise.all([
+    currentBranch(),
+    isWorkingTreeDirty(),
+    branchShas(),
+  ])
 
   const root: StackNode = {
     name: data.trunk,
     parent: null,
     children: [],
     ahead: 0,
-    behind: 0,
     isCurrent: current === data.trunk,
     isTrunk: true,
-    isMerged: false,
     isDirty: current === data.trunk && dirty,
-    exists: (await resolveSha(data.trunk)) !== null,
+    exists: shas.has(data.trunk),
   }
 
   const nodes = new Map<string, StackNode>([[data.trunk, root]])
 
-  // Create a node per tracked branch first, then wire up parent/child links.
-  for (const name of Object.keys(data.branches)) {
-    const exists = (await resolveSha(name)) !== null
-    const { parent } = data.branches[name]
-    const base = (await resolveSha(parent))
-      ? parent
-      : data.branches[name].parentSha
-    const { ahead, behind } = exists
-      ? await aheadBehind(base, name)
-      : { ahead: 0, behind: 0 }
+  // Create a node per tracked branch (in parallel), then wire up parent/child
+  // links once every node exists.
+  await Promise.all(
+    Object.keys(data.branches).map(async (name) => {
+      const exists = shas.has(name)
+      const { parent, parentSha } = data.branches[name]
+      const base = shas.has(parent) ? parent : parentSha
+      const ahead = exists ? await commitCount(base, name) : 0
 
-    nodes.set(name, {
-      name,
-      parent,
-      children: [],
-      ahead,
-      behind,
-      isCurrent: current === name,
-      isTrunk: false,
-      isMerged: exists ? await isMerged(name, data.trunk) : true,
-      isDirty: current === name && dirty,
-      exists,
-    })
-  }
+      nodes.set(name, {
+        name,
+        parent,
+        children: [],
+        ahead,
+        isCurrent: current === name,
+        isTrunk: false,
+        isDirty: current === name && dirty,
+        exists,
+      })
+    }),
+  )
 
   for (const name of Object.keys(data.branches)) {
     const node = nodes.get(name)!

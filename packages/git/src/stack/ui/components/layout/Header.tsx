@@ -16,7 +16,7 @@ export function Header({ trunk, branchCount, currentBranch }: Props) {
       justifyContent="space-between"
     >
       <Text bold color="cyan">
-        dev stack
+        Git Stack
       </Text>
       <Text dimColor>
         trunk: {trunk} · {branchCount} branches · current: {currentBranch}

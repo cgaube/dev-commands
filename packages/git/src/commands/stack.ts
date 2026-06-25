@@ -5,7 +5,7 @@ import { taskLogCommand } from '#common/commands'
 import { branchesChoices, getCurrentBranch } from '#src/utils/branches'
 import { renderStackApp } from '#src/stack/ui/render'
 import { buildForest, flatten } from '#src/stack/graph'
-import { track } from '#src/stack/model'
+import { track, rename } from '#src/stack/model'
 import { restack } from '#src/stack/restack'
 import { sync } from '#src/stack/sync'
 
@@ -89,6 +89,19 @@ function createSyncCommand() {
     })
 }
 
+function createRenameCommand() {
+  return new Command('rename')
+    .argument('<old>', 'current branch name')
+    .argument('<new>', 'new branch name')
+    .description('rename a tracked branch')
+    .action(async (oldName: string, newName: string) => {
+      introTitle('Stack rename')
+      await taskLogCommand('git', ['branch', '-m', oldName, newName])
+      await rename(oldName, newName)
+      outro(`Renamed ${oldName} → ${newName}`)
+    })
+}
+
 // `stack log` — print the tree non-interactively (scriptable, no TUI).
 function createLogCommand() {
   return new Command('log')
@@ -98,15 +111,9 @@ function createLogCommand() {
       for (const { node, depth } of flatten(root)) {
         const indent = '  '.repeat(depth)
         const marker = node.isCurrent ? picocolors.green('●') : '○'
-        const counts = [
-          node.ahead ? picocolors.green(`+${node.ahead}`) : '',
-          node.behind ? picocolors.red(`-${node.behind}`) : '',
-        ]
-          .filter(Boolean)
-          .join(' ')
+        const counts = node.ahead ? picocolors.green(`+${node.ahead}`) : ''
         const tags = [
           node.isCurrent ? picocolors.cyan('[current]') : '',
-          !node.isTrunk && node.isMerged ? picocolors.yellow('[merged]') : '',
           !node.exists ? picocolors.red('[gone]') : '',
         ]
           .filter(Boolean)
@@ -126,6 +133,7 @@ export function createStackCommand() {
 
   stack.addCommand(createCreateCommand())
   stack.addCommand(createTrackCommand())
+  stack.addCommand(createRenameCommand())
   stack.addCommand(createRestackCommand())
   stack.addCommand(createSyncCommand())
   stack.addCommand(createLogCommand())

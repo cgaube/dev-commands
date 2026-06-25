@@ -114,7 +114,6 @@ export function InfoPane({ node, pr }: { node?: StackNode; pr: PrState }) {
       node?.isTrunk ? 'trunk' : '',
       node?.isCurrent ? 'current' : '',
       node?.isDirty ? 'dirty' : '',
-      node && !node.isTrunk && node.isMerged ? 'merged' : '',
       node && !node.exists ? 'gone' : '',
     ]
       .filter(Boolean)
@@ -127,7 +126,6 @@ export function InfoPane({ node, pr }: { node?: StackNode; pr: PrState }) {
       <Row label="name" value={node.name} />
       <Row label="parent" value={node.parent ?? '—'} />
       <Row label="ahead" value={String(node.ahead)} />
-      <Row label="behind" value={String(node.behind)} />
       <Row label="status" value={status} />
       <PrRow pr={pr} />
       <CiRow pr={pr} />

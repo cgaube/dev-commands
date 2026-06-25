@@ -48,6 +48,19 @@ export async function mergeBase(a: string, b: string): Promise<string | null> {
   }
 }
 
+export async function forkPoint(
+  upstream: string,
+  branch: string,
+): Promise<string | null> {
+  try {
+    return (
+      await gitOutput(['merge-base', '--fork-point', upstream, branch])
+    ).trim()
+  } catch {
+    return null
+  }
+}
+
 // Clamp a diff to MAX_DIFF_CHARS, appending a marker so the AI provider knows it
 // is seeing only the first portion. Callers decide how to package the text and
 // whether to warn the user, hence the `truncated` flag.

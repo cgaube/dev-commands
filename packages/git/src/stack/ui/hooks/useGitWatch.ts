@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 
 const TARGETS: Array<[path: string, options?: WatchOptions]> = [
   ['refs/heads', { recursive: true }],
+  ['refs/remotes', { recursive: true }],
   ['HEAD'],
   ['devstack.json'],
   ['index'],

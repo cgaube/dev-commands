@@ -82,6 +82,27 @@ Merge detection is pure git (no GitHub dependency): a branch counts as merged
 when its commits are already contained in trunk, or when merging it into trunk
 would produce trunk's exact tree (the squash-merge case).
 
+**Fork-point correction.** The recorded `parentSha` can become stale — for
+example when a restack hits a conflict and the user resolves it with
+`git rebase --continue`, or when the branch is rebased manually outside the
+tool. A stale `parentSha` produces a rebase range that is too wide, replaying
+commits that already exist on the parent and causing repeat conflicts.
+
+Before each rebase, restack detects and corrects this:
+
+| parentSha state                                | inBranch | inParent | Action                                  |
+| ---------------------------------------------- | -------- | -------- | --------------------------------------- |
+| Valid, current                                 | true     | true     | Use `merge-base` (same value)           |
+| Stale (conflict recovery, manual rebase)       | true     | true     | Use `merge-base` (corrected fork point) |
+| Orphaned (parent was force-pushed)             | false    | false    | Use `merge-base` (only valid option)    |
+| Squash/rebase merge (parent history rewritten) | true     | false    | Keep recorded `parentSha`               |
+
+The squash/rebase-merge case is the only scenario where `merge-base` returns the
+wrong answer — it points to where the deleted parent originally forked from
+trunk, which is too old and would include the parent's commits in the replay
+range. The recorded `parentSha` (the deleted parent's old tip) correctly marks
+where the child's own commits begin.
+
 ## Requirements
 
 - `pr` requires the [`gh`](https://cli.github.com/) CLI to be installed and

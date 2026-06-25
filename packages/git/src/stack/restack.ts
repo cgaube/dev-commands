@@ -1,5 +1,5 @@
 import { execa } from 'execa'
-import { gitOutput, resolveSha } from '#src/utils/git'
+import { gitOutput, isAncestor, mergeBase, resolveSha } from '#src/utils/git'
 import { readMeta, writeMeta, type StackMeta } from './model'
 
 // Tracked branches ordered parent-before-child, so a restack walk always
@@ -68,20 +68,23 @@ export async function restack(only?: string[]): Promise<RestackResult> {
       result.skipped.push(branch)
       continue
     }
-    if (parentTip === info.parentSha) {
-      // Already sitting on the parent's current tip; nothing to replay.
+    // Trust the recorded parentSha only when it is a valid split point in
+    // the branch's history AND the parent's history was rewritten (squash or
+    // rebase merge). In every other case — stale, orphaned, or normal —
+    // merge-base gives the true fork point.
+    const fork = await mergeBase(info.parent, branch)
+    const inBranch = await isAncestor(info.parentSha, branch)
+    const inParent = await isAncestor(info.parentSha, info.parent)
+    const squashMerged = inBranch && !inParent
+    const base = squashMerged ? info.parentSha : (fork ?? info.parentSha)
+
+    if (parentTip === base) {
       result.skipped.push(branch)
       continue
     }
 
     try {
-      await execa('git', [
-        'rebase',
-        '--onto',
-        parentTip,
-        info.parentSha,
-        branch,
-      ])
+      await execa('git', ['rebase', '--onto', parentTip, base, branch])
     } catch (error) {
       result.conflict = {
         branch,

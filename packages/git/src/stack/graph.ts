@@ -10,6 +10,7 @@ export type StackNode = {
   isTrunk: boolean
   isDirty: boolean
   exists: boolean
+  diverged: boolean
 }
 
 export type FlatNode = { node: StackNode; depth: number }
@@ -36,13 +37,11 @@ async function currentBranch(): Promise<string> {
   return (await gitOutput(['rev-parse', '--abbrev-ref', 'HEAD'])).trim()
 }
 
-// Sha of every local branch in a single call, replacing a `rev-parse` per
-// branch and per recorded parent.
-async function branchShas(): Promise<Map<string, string>> {
+async function refShas(pattern: string): Promise<Map<string, string>> {
   const out = await gitOutput([
     'for-each-ref',
     '--format=%(refname:short) %(objectname)',
-    'refs/heads',
+    pattern,
   ])
   const shas = new Map<string, string>()
   for (const line of out.split('\n')) {
@@ -53,13 +52,29 @@ async function branchShas(): Promise<Map<string, string>> {
   return shas
 }
 
+async function branchShas(): Promise<{
+  local: Map<string, string>
+  remote: Map<string, string>
+}> {
+  const [local, rawRemote] = await Promise.all([
+    refShas('refs/heads'),
+    refShas('refs/remotes/origin'),
+  ])
+  const remote = new Map<string, string>()
+  for (const [ref, sha] of rawRemote) {
+    const name = ref.replace(/^origin\//, '')
+    remote.set(name, sha)
+  }
+  return { local, remote }
+}
+
 export async function buildForest(
   meta?: StackMeta,
 ): Promise<{ root: StackNode; meta: StackMeta }> {
   const data = meta ?? (await readMeta())
   const tracked = new Set(Object.keys(data.branches))
 
-  const [current, dirty, shas] = await Promise.all([
+  const [current, dirty, { local: shas, remote }] = await Promise.all([
     currentBranch(),
     isWorkingTreeDirty(),
     branchShas(),
@@ -74,6 +89,7 @@ export async function buildForest(
     isTrunk: true,
     isDirty: current === data.trunk && dirty,
     exists: shas.has(data.trunk),
+    diverged: false,
   }
 
   const nodes = new Map<string, StackNode>([[data.trunk, root]])
@@ -86,6 +102,9 @@ export async function buildForest(
       const { parent, parentSha } = data.branches[name]
       const base = shas.has(parent) ? parent : parentSha
       const ahead = exists ? await commitCount(base, name) : 0
+      const remoteSha = remote.get(name)
+      const localSha = shas.get(name)
+      const diverged = !!(localSha && remoteSha && localSha !== remoteSha)
 
       nodes.set(name, {
         name,
@@ -96,6 +115,7 @@ export async function buildForest(
         isTrunk: false,
         isDirty: current === name && dirty,
         exists,
+        diverged,
       })
     }),
   )

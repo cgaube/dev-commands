@@ -84,24 +84,29 @@ would produce trunk's exact tree (the squash-merge case).
 
 **Fork-point correction.** The recorded `parentSha` can become stale — for
 example when a restack hits a conflict and the user resolves it with
-`git rebase --continue`, or when the branch is rebased manually outside the
-tool. A stale `parentSha` produces a rebase range that is too wide, replaying
-commits that already exist on the parent and causing repeat conflicts.
+`git rebase --continue`, when the branch is rebased manually outside the tool,
+or when the parent branch is amended. A stale `parentSha` produces a rebase
+range that is too wide, replaying commits that already exist on the parent and
+causing repeat conflicts.
 
-Before each rebase, restack detects and corrects this:
+Before each rebase, restack picks the best exclusion point (base). The first
+check is a fast path: if `parentTip === parentSha`, the parent hasn't moved and
+the branch is skipped with no git overhead. Otherwise:
 
-| parentSha state                                | inBranch | inParent | Action                                  |
-| ---------------------------------------------- | -------- | -------- | --------------------------------------- |
-| Valid, current                                 | true     | true     | Use `merge-base` (same value)           |
-| Stale (conflict recovery, manual rebase)       | true     | true     | Use `merge-base` (corrected fork point) |
-| Orphaned (parent was force-pushed)             | false    | false    | Use `merge-base` (only valid option)    |
-| Squash/rebase merge (parent history rewritten) | true     | false    | Keep recorded `parentSha`               |
+| Scenario                                  | inBranch | inParent | Base chosen                | Why                                        |
+| ----------------------------------------- | -------- | -------- | -------------------------- | ------------------------------------------ |
+| Parent got new commits                    | true     | true     | `fork-point` (= parentSha) | No change needed — same value              |
+| Stale (conflict recovery, manual rebase)  | true     | true     | `fork-point` (corrected)   | Finds the true split point                 |
+| Parent amended (valid parentSha)          | true     | false    | `parentSha`                | Correctly excludes old parent tip          |
+| Parent amended (orphaned parentSha)       | false    | false    | `fork-point` via reflog    | Only the reflog knows the pre-amend fork   |
+| Orphaned (parent force-pushed, no reflog) | false    | false    | `merge-base`               | Last-resort common ancestor                |
+| Squash/rebase merge to trunk              | true     | false    | `parentSha`                | Only correct value — merge-base is too old |
 
-The squash/rebase-merge case is the only scenario where `merge-base` returns the
-wrong answer — it points to where the deleted parent originally forked from
-trunk, which is too old and would include the parent's commits in the replay
-range. The recorded `parentSha` (the deleted parent's old tip) correctly marks
-where the child's own commits begin.
+When `parentSha` is in the branch's history but NOT the parent's, the parent's
+history was rewritten (amend, squash merge, or rebase merge). `parentSha` is the
+only correct boundary in this case. Otherwise the base is computed: `fork-point`
+(reflog-aware) then `merge-base` (plain ancestor) then `parentSha` (last
+resort).
 
 ## Requirements
 

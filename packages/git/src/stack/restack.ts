@@ -1,5 +1,11 @@
 import { execa } from 'execa'
-import { gitOutput, isAncestor, mergeBase, resolveSha } from '#src/utils/git'
+import {
+  forkPoint,
+  gitOutput,
+  isAncestor,
+  mergeBase,
+  resolveSha,
+} from '#src/utils/git'
 import { readMeta, writeMeta, type StackMeta } from './model'
 
 // Tracked branches ordered parent-before-child, so a restack walk always
@@ -37,9 +43,16 @@ export type RestackResult = {
 }
 
 // Rebase each tracked branch onto its parent's current tip, walking top-down.
-// We rebase by range (`--onto <newBase> <recordedParentSha> <branch>`) so only
-// the branch's own commits replay — this is what drops a parent's commits after
-// it was squash-merged, and avoids re-applying commits the parent already has.
+//
+// The base (exclusion point) for each rebase is chosen in priority order:
+//   1. parentSha — when it's in the branch's history but NOT the parent's
+//      (squash/rebase merge rewrote the parent). Only this value correctly
+//      excludes the deleted parent's commits from the replay range.
+//   2. fork-point — `merge-base --fork-point` uses the parent's reflog to find
+//      the true fork even after the parent was amended or rebased.
+//   3. merge-base — plain common ancestor, handles stale/orphaned parentSha.
+//   4. parentSha — last resort when neither fork-point nor merge-base returns
+//      a result.
 //
 // `only` limits the walk to a subset of branches (e.g. one stack) while keeping
 // global parent-before-child ordering. On the first conflict we stop and leave
@@ -68,15 +81,23 @@ export async function restack(only?: string[]): Promise<RestackResult> {
       result.skipped.push(branch)
       continue
     }
-    // Trust the recorded parentSha only when it is a valid split point in
-    // the branch's history AND the parent's history was rewritten (squash or
-    // rebase merge). In every other case — stale, orphaned, or normal —
-    // merge-base gives the true fork point.
-    const fork = await mergeBase(info.parent, branch)
-    const inBranch = await isAncestor(info.parentSha, branch)
-    const inParent = await isAncestor(info.parentSha, info.parent)
-    const squashMerged = inBranch && !inParent
-    const base = squashMerged ? info.parentSha : (fork ?? info.parentSha)
+    if (parentTip === info.parentSha) {
+      result.skipped.push(branch)
+      continue
+    }
+
+    const [fp, inBranch, inParent] = await Promise.all([
+      forkPoint(info.parent, branch),
+      isAncestor(info.parentSha, branch),
+      isAncestor(info.parentSha, info.parent),
+    ])
+
+    let base: string
+    if (inBranch && !inParent) {
+      base = info.parentSha
+    } else {
+      base = fp ?? (await mergeBase(info.parent, branch)) ?? info.parentSha
+    }
 
     if (parentTip === base) {
       result.skipped.push(branch)

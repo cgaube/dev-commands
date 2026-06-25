@@ -19,10 +19,7 @@ async function isWorkingTreeDirty(): Promise<boolean> {
   return out.split(/\r?\n/).some((l) => l.trim().length > 0)
 }
 
-async function commitCount(
-  base: string,
-  branch: string,
-): Promise<number> {
+async function commitCount(base: string, branch: string): Promise<number> {
   try {
     const out = (
       await gitOutput(['rev-list', '--count', `${base}..${branch}`])

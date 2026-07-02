@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Box, useApp, useInput } from 'ink'
 import { branchLog } from '#src/stack/log'
+import { type FlatNode } from '#src/stack/graph'
 import { branchPr, type PrInfo } from '#src/stack/pr'
 import { CreateModal } from './CreateModal'
 import { RenameModal } from './RenameModal'
@@ -41,21 +42,25 @@ export function App() {
   const [renaming, setRenaming] = useState(false)
   const [newBranch, setNewBranch] = useState('')
 
-  const prFetchedRef = useRef(new Set<string>())
+  const prGenRef = useRef(0)
 
   const log = useBranchPane(right === 'log', selectedNode?.name, branchLog)
 
-  // PRs for every tracked branch are fetched in bulk below whenever the node
-  // list changes, so the info pane reads from `prs` without its own fetch.
-  useEffect(() => {
-    for (const { node } of nodes) {
-      if (node.isTrunk || prFetchedRef.current.has(node.name)) continue
-      prFetchedRef.current.add(node.name)
+  const fetchPrs = useCallback((nodeList: FlatNode[]) => {
+    const gen = ++prGenRef.current
+    setPrs({})
+    for (const { node } of nodeList) {
+      if (node.isTrunk) continue
       branchPr(node.name).then((info) => {
+        if (prGenRef.current !== gen) return
         setPrs((m) => ({ ...m, [node.name]: info }))
       })
     }
-  }, [nodes])
+  }, [])
+
+  useEffect(() => {
+    fetchPrs(nodes)
+  }, [nodes, fetchPrs])
 
   const doCreate = (name: string) => {
     const trimmed = name.trim()
@@ -105,8 +110,7 @@ export function App() {
     } else if (input === 's') {
       actions.sync()
     } else if (input === 'R') {
-      setPrs({})
-      prFetchedRef.current.clear()
+      fetchPrs(nodes)
       run('refreshing…', async () => 'refreshed')
     } else if (input === 'n') {
       if (selectedNode) {

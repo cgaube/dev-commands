@@ -16,9 +16,13 @@ export function useBranchPane<T>(
       return
     }
     let cancelled = false
-    fetcher(name).then((d) => {
-      if (!cancelled) setData(d)
-    })
+    fetcher(name)
+      .then((d) => {
+        if (!cancelled) setData(d)
+      })
+      .catch(() => {
+        if (!cancelled) setData(null)
+      })
     return () => {
       cancelled = true
     }

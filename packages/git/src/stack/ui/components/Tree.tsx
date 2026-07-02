@@ -38,6 +38,7 @@ export function Tree({ nodes, selected, maxRows, maxWidth, prs }: Props) {
 
         const badges: string[] = []
         if (node.ahead > 0) badges.push(`+${node.ahead}`)
+        if (node.parentMoved) badges.push('!')
         if (node.diverged) badges.push('⇡⇣')
         if (node.isDirty) badges.push('*')
         if (!node.exists) badges.push('[gone]')
@@ -77,6 +78,7 @@ export function Tree({ nodes, selected, maxRows, maxWidth, prs }: Props) {
 
             {node.ahead > 0 && <Text color="green"> +{node.ahead}</Text>}
 
+            {node.parentMoved && <Text color="yellow"> {'!'}</Text>}
             {node.diverged && <Text color="yellow"> ⇡⇣</Text>}
             {node.isDirty && <Text color="yellow"> *</Text>}
             {!node.exists && <Text color="red"> [gone]</Text>}

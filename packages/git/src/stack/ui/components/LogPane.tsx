@@ -1,5 +1,6 @@
 import { Box, Text } from 'ink'
 import type { BranchLog } from '#src/stack/log'
+import { Kbd } from './Kbd'
 
 type Props = {
   log: BranchLog
@@ -18,8 +19,9 @@ function splitOneline(line: string): { sha: string; subject: string } {
 // dimmed for context. Rendered inside the shared right-panel frame.
 export function LogPane({ log, maxLines }: Props) {
   const allLines = log.commits ? log.commits.split('\n') : []
-  // Reserve a row for the dimmed base line when there is one.
-  const limit = log.base ? Math.max(1, maxLines - 1) : maxLines
+  const movedHint = log.parentMoved
+  const reserved = (log.base ? 1 : 0) + (movedHint ? 2 : 0)
+  const limit = Math.max(1, maxLines - reserved)
   const lines = allLines.slice(0, limit)
   const clipped = allLines.length > limit
 
@@ -52,6 +54,14 @@ export function LogPane({ log, maxLines }: Props) {
             return `${sha} ${subject}  (${log.parent})`
           })()}
         </Text>
+      )}
+      {movedHint && (
+        <>
+          <Text> </Text>
+          <Text color="yellow">
+            ! parent has new commits — <Kbd>r</Kbd> to restack
+          </Text>
+        </>
       )}
     </Box>
   )

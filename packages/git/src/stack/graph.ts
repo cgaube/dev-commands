@@ -11,6 +11,7 @@ export type StackNode = {
   isDirty: boolean
   exists: boolean
   diverged: boolean
+  parentMoved: boolean
 }
 
 export type FlatNode = { node: StackNode; depth: number }
@@ -90,6 +91,7 @@ export async function buildForest(
     isDirty: current === data.trunk && dirty,
     exists: shas.has(data.trunk),
     diverged: false,
+    parentMoved: false,
   }
 
   const nodes = new Map<string, StackNode>([[data.trunk, root]])
@@ -105,6 +107,8 @@ export async function buildForest(
       const remoteSha = remote.get(name)
       const localSha = shas.get(name)
       const diverged = !!(localSha && remoteSha && localSha !== remoteSha)
+      const parentTip = shas.get(parent)
+      const parentMoved = !!(parentTip && parentTip !== parentSha)
 
       nodes.set(name, {
         name,
@@ -116,6 +120,7 @@ export async function buildForest(
         isDirty: current === name && dirty,
         exists,
         diverged,
+        parentMoved,
       })
     }),
   )

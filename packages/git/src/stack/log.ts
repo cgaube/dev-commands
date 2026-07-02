@@ -1,23 +1,21 @@
-import { gitOutput } from '#src/utils/git'
+import { gitOutput, resolveSha } from '#src/utils/git'
 import { readMeta, type StackMeta } from './model'
 
 export type BranchLog = {
-  // `git log --oneline parent..branch`: the commits the branch adds.
   commits: string
   parent: string
-  // The parent's last commit (oneline) — the base the branch sits on, shown
-  // dimmed for context. Null if the parent ref can't be resolved.
+  // The parentSha commit (oneline) — the actual base the branch sits on.
+  // Null if the ref can't be resolved.
   base: string | null
+  // True when the parent branch tip has moved from the recorded parentSha,
+  // meaning the branch needs a restack to pick up new parent commits.
+  parentMoved: boolean
   // Set when a ref can't be resolved — signals the UI to suggest a sync.
   error?: string
 }
 
-// Trunk has no parent, so we just show its recent history.
 const TRUNK_LOG_COUNT = 5
 
-// The commits a branch adds on top of its parent, plus the parent's tip commit
-// for context — the commit-level counterpart to `branchDiff`. Trunk has no
-// parent, so we show its last few commits instead.
 export async function branchLog(
   branch: string,
   meta?: StackMeta,
@@ -31,31 +29,42 @@ export async function branchLog(
       `-${TRUNK_LOG_COUNT}`,
       branch,
     ])
-    return { commits, parent: '', base: null }
+    return { commits, parent: '', base: null, parentMoved: false }
   }
 
   const info = data.branches[branch]
   const parent = info ? info.parent : data.trunk
+  // Use the recorded parentSha as the log base so we always show exactly
+  // this branch's commits, even when the parent has moved.
+  const rangeBase = info?.parentSha ?? parent
 
   let commits: string
   try {
-    commits = await gitOutput(['log', '--oneline', `${parent}..${branch}`])
+    commits = await gitOutput(['log', '--oneline', `${rangeBase}..${branch}`])
   } catch {
     const missing = info ? `parent "${parent}"` : `branch "${branch}"`
     return {
       commits: '',
       parent,
       base: null,
+      parentMoved: false,
       error: `${missing} no longer exists`,
     }
   }
 
   let base: string | null
   try {
-    base = (await gitOutput(['log', '--oneline', '-1', parent])).trim() || null
+    base =
+      (await gitOutput(['log', '--oneline', '-1', rangeBase])).trim() || null
   } catch {
     base = null
   }
 
-  return { commits, parent, base }
+  let parentMoved = false
+  if (info?.parentSha) {
+    const currentParentSha = await resolveSha(parent)
+    parentMoved = !!currentParentSha && currentParentSha !== info.parentSha
+  }
+
+  return { commits, parent, base, parentMoved }
 }

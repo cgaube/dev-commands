@@ -23,6 +23,15 @@ export function LogPane({ log, maxLines }: Props) {
   const lines = allLines.slice(0, limit)
   const clipped = allLines.length > limit
 
+  if (log.error) {
+    return (
+      <Box flexDirection="column">
+        <Text color="yellow">{log.error}</Text>
+        <Text dimColor>press s to sync</Text>
+      </Box>
+    )
+  }
+
   if (lines.length === 0 && !log.base) return <Text dimColor>no commits</Text>
 
   return (

@@ -8,6 +8,8 @@ export type BranchLog = {
   // The parent's last commit (oneline) — the base the branch sits on, shown
   // dimmed for context. Null if the parent ref can't be resolved.
   base: string | null
+  // Set when a ref can't be resolved — signals the UI to suggest a sync.
+  error?: string
 }
 
 // Trunk has no parent, so we just show its recent history.
@@ -35,7 +37,19 @@ export async function branchLog(
   const info = data.branches[branch]
   const parent = info ? info.parent : data.trunk
 
-  const commits = await gitOutput(['log', '--oneline', `${parent}..${branch}`])
+  let commits: string
+  try {
+    commits = await gitOutput(['log', '--oneline', `${parent}..${branch}`])
+  } catch {
+    const missing = info ? `parent "${parent}"` : `branch "${branch}"`
+    return {
+      commits: '',
+      parent,
+      base: null,
+      error: `${missing} no longer exists`,
+    }
+  }
+
   let base: string | null
   try {
     base = (await gitOutput(['log', '--oneline', '-1', parent])).trim() || null

@@ -5,7 +5,7 @@ import { taskLogCommand } from '#common/commands'
 import { branchesChoices, getCurrentBranch } from '#src/utils/branches'
 import { renderStackApp } from '#src/stack/ui/render'
 import { buildForest, flatten } from '#src/stack/graph'
-import { track, rename } from '#src/stack/model'
+import { track, rename, untrack } from '#src/stack/model'
 import { restack } from '#src/stack/restack'
 import { sync } from '#src/stack/sync'
 
@@ -102,6 +102,21 @@ function createRenameCommand() {
     })
 }
 
+// `stack untrack` (alias unfollow) — remove a branch from the stack without
+// deleting it. Children are re-parented to the untracked branch's parent.
+function createUntrackCommand() {
+  return new Command('untrack')
+    .alias('unfollow')
+    .argument('[branch]', 'branch to untrack (defaults to current)')
+    .description('stop tracking a branch in the stack')
+    .action(async (branch?: string) => {
+      introTitle('Stack untrack')
+      const target = branch ?? getCurrentBranch()
+      await untrack(target)
+      outro(`Untracked ${target}`)
+    })
+}
+
 // `stack log` — print the tree non-interactively (scriptable, no TUI).
 function createLogCommand() {
   return new Command('log')
@@ -134,6 +149,7 @@ export function createStackCommand() {
   stack.addCommand(createCreateCommand())
   stack.addCommand(createTrackCommand())
   stack.addCommand(createRenameCommand())
+  stack.addCommand(createUntrackCommand())
   stack.addCommand(createRestackCommand())
   stack.addCommand(createSyncCommand())
   stack.addCommand(createLogCommand())

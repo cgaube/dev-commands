@@ -7,6 +7,7 @@ const HINTS: [key: string, action: string][] = [
   ['↵', 'checkout'],
   ['n', 'new'],
   ['m', 'rename'],
+  ['u', 'untrack'],
   ['p', 'push'],
   ['P', 'create-pr'],
   ['o', 'open-pr'],

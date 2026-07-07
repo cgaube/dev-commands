@@ -108,6 +108,12 @@ export async function rename(
 
 export async function untrack(branch: string): Promise<StackMeta> {
   const meta = await readMeta()
+  const entry = meta.branches[branch]
+  if (entry) {
+    for (const info of Object.values(meta.branches)) {
+      if (info.parent === branch) info.parent = entry.parent
+    }
+  }
   delete meta.branches[branch]
   await writeMeta(meta)
   return meta

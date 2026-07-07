@@ -122,6 +122,9 @@ export function App() {
         setNewBranch(selectedNode.name)
         setRenaming(true)
       }
+    } else if (input === 'u') {
+      if (selectedNode && !selectedNode.isTrunk)
+        actions.untrack(selectedNode.name)
     }
   })
 

@@ -12,7 +12,7 @@ type Props = {
 // the outcome (success/error/info).
 export function StatusBar({ busy, status, variant }: Props) {
   return (
-    <Box borderStyle="round" borderColor="gray" paddingX={1}>
+    <Box borderStyle="round" borderColor="gray" paddingX={1} flexShrink={0}>
       {busy ? (
         <Spinner label={status} />
       ) : (

@@ -1,25 +1,28 @@
 import { Box, Text } from 'ink'
 import { Kbd } from '../Kbd'
 
-// Keyboard shortcuts shown in the legend bar, in display order.
-const HINTS: [key: string, action: string][] = [
+type Hint = [key: string, action: string]
+
+const ALWAYS: Hint[] = [
   ['↑↓', 'move'],
   ['↵', 'checkout'],
-  ['n', 'new'],
-  ['m', 'rename'],
-  ['u', 'untrack'],
+]
+
+const BRANCH: Hint[] = [
   ['p', 'push'],
   ['P', 'create-pr'],
   ['o', 'open-pr'],
+]
+
+const TAIL: Hint[] = [
   ['r', 'restack'],
-  ['s', 'sync'],
-  ['R', 'refresh'],
+  ['?', 'help'],
   ['q', 'quit'],
 ]
 
-// Legend bar: key caps paired with their action labels, wrapping to fit the
-// terminal width.
-export function Legend() {
+export function Legend({ isTrunk }: { isTrunk: boolean }) {
+  const hints = isTrunk ? [...ALWAYS, ...TAIL] : [...ALWAYS, ...BRANCH, ...TAIL]
+
   return (
     <Box
       justifyContent="center"
@@ -27,8 +30,9 @@ export function Legend() {
       flexWrap={'wrap'}
       paddingX={1}
       marginBottom={1}
+      flexShrink={0}
     >
-      {HINTS.map(([key, action]) => (
+      {hints.map(([key, action]) => (
         <Box key={key}>
           <Kbd>{key}</Kbd>
           <Text dimColor> {action}</Text>

@@ -11,6 +11,7 @@ import { StackPane } from './layout/StackPane'
 import { ContentArea } from './layout/ContentArea'
 import { StatusBar } from './layout/StatusBar'
 import { Legend } from './layout/Legend'
+import { HelpOverlay, HELP_LINE_COUNT } from './layout/HelpOverlay'
 import { useTerminalSize } from '../hooks/useTerminalSize'
 import { useBranchPane } from '../hooks/useBranchPane'
 import { useStackData } from '../hooks/useStackData'
@@ -40,6 +41,8 @@ export function App() {
   const [prs, setPrs] = useState<Record<string, PrInfo | null>>({})
   const [creating, setCreating] = useState(false)
   const [renaming, setRenaming] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
+  const [helpScroll, setHelpScroll] = useState(0)
   const [newBranch, setNewBranch] = useState('')
 
   const prGenRef = useRef(0)
@@ -81,8 +84,20 @@ export function App() {
   useInput((input, key) => {
     if (key.ctrl && input === 'c') return exit()
     if (creating || renaming) return
+    if (showHelp) {
+      if (input === '?' || key.escape || input === 'q') {
+        setShowHelp(false)
+        setHelpScroll(0)
+      } else if (key.upArrow || input === 'k') {
+        setHelpScroll((s) => Math.max(0, s - 1))
+      } else if (key.downArrow || input === 'j') {
+        setHelpScroll((s) => Math.min(HELP_LINE_COUNT - 1, s + 1))
+      }
+      return
+    }
     if (busy) return
 
+    if (input === '?') return setShowHelp(true)
     if (input === 'q' || key.escape) return exit()
     if (key.upArrow || input === 'k') {
       setSelected((s) => Math.max(0, s - 1))
@@ -157,58 +172,64 @@ export function App() {
         currentBranch={currentBranch}
       />
 
-      <StackPane
-        nodes={nodes}
-        selected={selected}
-        prs={prs}
-        syncing={syncing}
-        hasTrackedBranches={hasTrackedBranches}
-        maxHeight={treeMaxHeight}
-        innerWidth={innerWidth}
-      />
-
-      {creating && selectedNode ? (
-        <Box
-          flexGrow={1}
-          flexDirection="column"
-          justifyContent="center"
-          alignItems="center"
-        >
-          <CreateModal
-            parent={selectedNode.name}
-            value={newBranch}
-            onChange={setNewBranch}
-            onSubmit={doCreate}
-            onCancel={() => setCreating(false)}
-          />
-        </Box>
-      ) : renaming && selectedNode ? (
-        <Box
-          flexGrow={1}
-          flexDirection="column"
-          justifyContent="center"
-          alignItems="center"
-        >
-          <RenameModal
-            branch={selectedNode.name}
-            value={newBranch}
-            onChange={setNewBranch}
-            onSubmit={doRename}
-            onCancel={() => setRenaming(false)}
-          />
-        </Box>
+      {showHelp ? (
+        <HelpOverlay scroll={helpScroll} />
       ) : (
-        <ContentArea
-          right={right}
-          selectedNode={selectedNode}
-          log={log}
-          pr={prState}
-        />
+        <>
+          <StackPane
+            nodes={nodes}
+            selected={selected}
+            prs={prs}
+            syncing={syncing}
+            hasTrackedBranches={hasTrackedBranches}
+            maxHeight={treeMaxHeight}
+            innerWidth={innerWidth}
+          />
+
+          {creating && selectedNode ? (
+            <Box
+              flexGrow={1}
+              flexDirection="column"
+              justifyContent="center"
+              alignItems="center"
+            >
+              <CreateModal
+                parent={selectedNode.name}
+                value={newBranch}
+                onChange={setNewBranch}
+                onSubmit={doCreate}
+                onCancel={() => setCreating(false)}
+              />
+            </Box>
+          ) : renaming && selectedNode ? (
+            <Box
+              flexGrow={1}
+              flexDirection="column"
+              justifyContent="center"
+              alignItems="center"
+            >
+              <RenameModal
+                branch={selectedNode.name}
+                value={newBranch}
+                onChange={setNewBranch}
+                onSubmit={doRename}
+                onCancel={() => setRenaming(false)}
+              />
+            </Box>
+          ) : (
+            <ContentArea
+              right={right}
+              selectedNode={selectedNode}
+              log={log}
+              pr={prState}
+            />
+          )}
+        </>
       )}
 
       <StatusBar busy={busy} status={status} variant={statusVariant} />
 
-      <Legend />
+      <Legend isTrunk={selectedNode?.isTrunk ?? true} />
     </Box>
   )
 }

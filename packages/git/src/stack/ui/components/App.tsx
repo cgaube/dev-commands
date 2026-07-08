@@ -122,8 +122,6 @@ export function App() {
       }
     } else if (input === 'r') {
       actions.restack()
-    } else if (input === 's') {
-      actions.sync()
     } else if (input === 'R') {
       fetchPrs(nodes)
       run('refreshing…', async () => 'refreshed')

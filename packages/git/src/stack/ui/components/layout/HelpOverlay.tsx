@@ -38,8 +38,7 @@ const GROUPS: Group[] = [
   {
     title: 'Stack',
     shortcuts: [
-      ['r', 'restack', 'rebase each branch onto its parent'],
-      ['s', 'sync', 'clean orphaned branches and restack'],
+      ['r', 'restack', 'clean orphans and rebase onto parents'],
       ['R', 'refresh', 'reload stack view and PR statuses'],
     ],
   },

@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { execa } from 'execa'
 import { restack } from '#src/stack/restack'
-import { sync } from '#src/stack/sync'
 import { track, rename, untrack } from '#src/stack/model'
 
 type Run = (label: string, fn: () => Promise<string>) => Promise<void>
@@ -71,29 +70,20 @@ export function useStackActions(run: Run, trunk: string) {
       restack: () =>
         run('restacking…', async () => {
           const r = await restack()
-          if (r.conflict) {
-            return `conflict on ${r.conflict.branch} — resolve, run \`git rebase --continue\`, then restack again`
-          }
-          return r.restacked.length
-            ? `restacked ${r.restacked.join(', ')}`
-            : 'already up to date'
-        }),
-
-      sync: () =>
-        run('syncing…', async () => {
-          const r = await sync()
-          if (r.merged.length) {
+          if (r.cleaned.length) {
             await execa('git', ['checkout', trunk]).catch(() => {})
-            for (const b of r.merged) {
+            for (const b of r.cleaned) {
               await execa('git', ['branch', '-D', b]).catch(() => {})
             }
           }
-          if (r.restack.conflict) {
-            return `synced, but conflict on ${r.restack.conflict.branch} — resolve then restack`
+          if (r.conflict) {
+            return `conflict on ${r.conflict.branch} — resolve, run \`git rebase --continue\`, then restack again`
           }
-          return r.merged.length
-            ? `synced — removed ${r.merged.join(', ')}`
-            : 'nothing merged to sync'
+          const parts: string[] = []
+          if (r.cleaned.length) parts.push(`removed ${r.cleaned.join(', ')}`)
+          if (r.restacked.length)
+            parts.push(`restacked ${r.restacked.join(', ')}`)
+          return parts.length ? parts.join(' · ') : 'already up to date'
         }),
 
       create: (name: string, parent: string) =>

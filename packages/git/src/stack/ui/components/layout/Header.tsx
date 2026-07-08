@@ -14,6 +14,7 @@ export function Header({ trunk, branchCount, currentBranch }: Props) {
       borderColor="cyan"
       paddingX={1}
       justifyContent="space-between"
+      flexShrink={0}
     >
       <Text bold color="cyan">
         Git Stack

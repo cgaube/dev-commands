@@ -39,6 +39,7 @@ export function stackOrder(meta: StackMeta): string[] {
 export type RestackResult = {
   restacked: string[]
   skipped: string[]
+  cleaned: string[]
   conflict?: { branch: string; message: string }
 }
 
@@ -59,13 +60,28 @@ export type RestackResult = {
 // the repo mid-rebase so the user can resolve and `git rebase --continue`.
 export async function restack(only?: string[]): Promise<RestackResult> {
   const meta = await readMeta()
+
+  // Clean up orphaned branches (refs deleted outside the TUI) before rebasing.
+  const cleaned: string[] = []
+  for (const name of stackOrder(meta)) {
+    if (!meta.branches[name]) continue
+    if (await resolveSha(name)) continue
+    const grandparent = meta.branches[name].parent
+    for (const info of Object.values(meta.branches)) {
+      if (info.parent === name) info.parent = grandparent
+    }
+    delete meta.branches[name]
+    cleaned.push(name)
+  }
+  if (cleaned.length) await writeMeta(meta)
+
   const limit = only ? new Set(only) : null
   const order = stackOrder(meta).filter((b) => !limit || limit.has(b))
 
   const original = (
     await gitOutput(['rev-parse', '--abbrev-ref', 'HEAD'])
   ).trim()
-  const result: RestackResult = { restacked: [], skipped: [] }
+  const result: RestackResult = { restacked: [], skipped: [], cleaned }
 
   for (const branch of order) {
     const info = meta.branches[branch]

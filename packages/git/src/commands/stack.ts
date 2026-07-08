@@ -7,7 +7,6 @@ import { renderStackApp } from '#src/stack/ui/render'
 import { buildForest, flatten } from '#src/stack/graph'
 import { track, rename, untrack } from '#src/stack/model'
 import { restack } from '#src/stack/restack'
-import { sync } from '#src/stack/sync'
 
 // `stack create <name>` — branch off the current branch and record the parent
 // in one step, so new work is tracked from the moment it exists.
@@ -41,10 +40,17 @@ function createTrackCommand() {
 
 function createRestackCommand() {
   return new Command('restack')
-    .description('rebase the stack onto its parents')
+    .description('clean orphaned branches and rebase the stack')
     .action(async () => {
       introTitle('Stack restack')
       const result = await restack()
+      if (result.cleaned.length) {
+        const { meta } = await buildForest()
+        await taskLogCommand('git', ['checkout', meta.trunk])
+        for (const branch of result.cleaned) {
+          await taskLogCommand('git', ['branch', '-D', branch])
+        }
+      }
       if (result.conflict) {
         return outro(
           picocolors.red(
@@ -52,40 +58,12 @@ function createRestackCommand() {
           ),
         )
       }
-      outro(
-        result.restacked.length
-          ? `Restacked ${result.restacked.join(', ')}`
-          : 'Already up to date',
-      )
-    })
-}
-
-function createSyncCommand() {
-  return new Command('sync')
-    .description('reparent merged branches and restack')
-    .action(async () => {
-      introTitle('Stack sync')
-      const result = await sync()
-      if (result.merged.length) {
-        // Merged branches' changes are already in trunk; drop the local refs.
-        const { meta } = await buildForest()
-        await taskLogCommand('git', ['checkout', meta.trunk])
-        for (const branch of result.merged) {
-          await taskLogCommand('git', ['branch', '-D', branch])
-        }
-      }
-      if (result.restack.conflict) {
-        return outro(
-          picocolors.red(
-            `Synced, but conflict on ${result.restack.conflict.branch}. Resolve then restack.`,
-          ),
-        )
-      }
-      outro(
-        result.merged.length
-          ? `Synced — removed ${result.merged.join(', ')}`
-          : 'Nothing merged to sync',
-      )
+      const parts: string[] = []
+      if (result.cleaned.length)
+        parts.push(`Removed ${result.cleaned.join(', ')}`)
+      if (result.restacked.length)
+        parts.push(`Restacked ${result.restacked.join(', ')}`)
+      outro(parts.length ? parts.join(' · ') : 'Already up to date')
     })
 }
 
@@ -151,7 +129,6 @@ export function createStackCommand() {
   stack.addCommand(createRenameCommand())
   stack.addCommand(createUntrackCommand())
   stack.addCommand(createRestackCommand())
-  stack.addCommand(createSyncCommand())
   stack.addCommand(createLogCommand())
 
   return stack

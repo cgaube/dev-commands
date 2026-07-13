@@ -12,7 +12,6 @@ type Props = {
   syncing: boolean
   hasTrackedBranches: boolean
   maxHeight: number
-  innerWidth: number
 }
 
 // The stack tree: sizes to its branches up to maxHeight, then clips and scrolls
@@ -25,7 +24,6 @@ export function StackPane({
   syncing,
   hasTrackedBranches,
   maxHeight,
-  innerWidth,
 }: Props) {
   const [treeRef, treeRows] = useMeasuredHeight()
 
@@ -55,13 +53,7 @@ export function StackPane({
         minHeight={0}
         overflow="hidden"
       >
-        <Tree
-          nodes={nodes}
-          selected={selected}
-          maxRows={treeRows}
-          maxWidth={innerWidth}
-          prs={prs}
-        />
+        <Tree nodes={nodes} selected={selected} maxRows={treeRows} prs={prs} />
         {!hasTrackedBranches && (
           <Text dimColor>no tracked branches — press n to create one</Text>
         )}

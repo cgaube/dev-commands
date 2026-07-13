@@ -12,6 +12,7 @@
   "dependencies": {
     "@clack/prompts": "^1.6.0",
     "@inkjs/ui": "^2.0.0",
+    "@tanstack/react-query": "^5.101.2",
     "colorize-template": "^1.0.0",
     "commander": "^15.0.0",
     "execa": "^9.6.1",

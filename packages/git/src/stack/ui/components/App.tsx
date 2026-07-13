@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Box, useApp, useInput } from 'ink'
-import { branchLog } from '#src/stack/log'
-import { type FlatNode } from '#src/stack/graph'
-import { branchPr, type PrInfo } from '#src/stack/pr'
+import { useQueries, useQuery } from '@tanstack/react-query'
+import { logQueryOptions, prQueryOptions } from '../query/queries'
+import type { PrInfo } from '#src/stack/pr'
 import { CreateModal } from './CreateModal'
 import { RenameModal } from './RenameModal'
 import { TABS, type TabMode } from './Tabs'
@@ -13,7 +13,6 @@ import { StatusBar } from './layout/StatusBar'
 import { Legend } from './layout/Legend'
 import { HelpOverlay, HELP_LINE_COUNT } from './layout/HelpOverlay'
 import { useTerminalSize } from '../hooks/useTerminalSize'
-import { useBranchPane } from '../hooks/useBranchPane'
 import { useStackData } from '../hooks/useStackData'
 import { useStackActions } from '../hooks/useStackActions'
 
@@ -38,32 +37,29 @@ export function App() {
   const actions = useStackActions(run, trunk)
 
   const [right, setRight] = useState<TabMode>('info')
-  const [prs, setPrs] = useState<Record<string, PrInfo | null>>({})
   const [creating, setCreating] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [helpScroll, setHelpScroll] = useState(0)
   const [newBranch, setNewBranch] = useState('')
 
-  const prGenRef = useRef(0)
+  const logQuery = useQuery(logQueryOptions(selectedNode?.name))
+  const log = logQuery.data ?? null
 
-  const log = useBranchPane(right === 'log', selectedNode?.name, branchLog)
-
-  const fetchPrs = useCallback((nodeList: FlatNode[]) => {
-    const gen = ++prGenRef.current
-    setPrs({})
-    for (const { node } of nodeList) {
-      if (node.isTrunk) continue
-      branchPr(node.name).then((info) => {
-        if (prGenRef.current !== gen) return
-        setPrs((m) => ({ ...m, [node.name]: info }))
-      })
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchPrs(nodes)
-  }, [nodes, fetchPrs])
+  const trackedNodes = useMemo(
+    () => nodes.filter(({ node }) => !node.isTrunk),
+    [nodes],
+  )
+  const prResults = useQueries({
+    queries: trackedNodes.map(({ node }) => prQueryOptions(node.name)),
+  })
+  const prs = useMemo(() => {
+    const map: Record<string, PrInfo | null> = {}
+    trackedNodes.forEach(({ node }, i) => {
+      if (prResults[i]?.data !== undefined) map[node.name] = prResults[i].data!
+    })
+    return map
+  }, [trackedNodes, prResults])
 
   const doCreate = (name: string) => {
     const trimmed = name.trim()
@@ -123,7 +119,6 @@ export function App() {
     } else if (input === 'r') {
       if (selectedNode) actions.restack(selectedNode.name)
     } else if (input === 'R') {
-      fetchPrs(nodes)
       run('refreshing…', async () => 'refreshed')
     } else if (input === 'n') {
       if (selectedNode) {
@@ -147,12 +142,18 @@ export function App() {
   // beyond that it scrolls (overflow is clipped and Tree shows "↑/↓ N more").
   const treeMaxHeight = Math.max(4, Math.floor(rows * 0.4))
 
+  const selectedPrIdx =
+    selectedNode && !selectedNode.isTrunk
+      ? trackedNodes.findIndex(({ node }) => node.name === selectedNode.name)
+      : -1
+  const selectedPrResult =
+    selectedPrIdx >= 0 ? prResults[selectedPrIdx] : undefined
   const prState =
     !selectedNode || selectedNode.isTrunk
       ? undefined
-      : selectedNode.name in prs
-        ? prs[selectedNode.name]
-        : 'loading'
+      : selectedPrResult?.isPending
+        ? 'loading'
+        : (selectedPrResult?.data ?? null)
 
   return (
     <Box

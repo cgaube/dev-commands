@@ -1,4 +1,5 @@
 import { Box, Text } from 'ink'
+import { Spinner } from '@inkjs/ui'
 import type { StackNode } from '#src/stack/graph'
 import type { PrInfo } from '#src/stack/pr'
 import type { BranchLog } from '#src/stack/log'
@@ -24,7 +25,10 @@ export function ContentArea({ right, selectedNode, log, pr }: Props) {
     content = log ? (
       <LogPane log={log} maxLines={paneLines} />
     ) : (
-      <Text dimColor>loading…</Text>
+      <Box gap={1}>
+        <Spinner />
+        <Text dimColor>loading…</Text>
+      </Box>
     )
   } else {
     content = <InfoPane node={selectedNode} pr={pr} />

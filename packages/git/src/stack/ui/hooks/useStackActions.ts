@@ -67,9 +67,9 @@ export function useStackActions(run: Run, trunk: string) {
           }
         }),
 
-      restack: () =>
+      restack: (from: string) =>
         run('restacking…', async () => {
-          const r = await restack()
+          const r = await restack(from)
           if (r.cleaned.length) {
             await execa('git', ['checkout', trunk]).catch(() => {})
             for (const b of r.cleaned) {
@@ -98,6 +98,16 @@ export function useStackActions(run: Run, trunk: string) {
           await execa('git', ['branch', '-m', oldName, newName])
           await rename(oldName, newName)
           return `renamed ${oldName} → ${newName}`
+        }),
+
+      fetch: (name: string, isCurrent: boolean) =>
+        run(`fetching ${name}…`, async () => {
+          if (isCurrent) {
+            await execa('git', ['pull', '--ff-only'])
+          } else {
+            await execa('git', ['fetch', 'origin', `${name}:${name}`])
+          }
+          return `fetched ${name}`
         }),
 
       untrack: (name: string) =>

@@ -40,10 +40,12 @@ function createTrackCommand() {
 
 function createRestackCommand() {
   return new Command('restack')
-    .description('clean orphaned branches and rebase the stack')
-    .action(async () => {
+    .argument('[branch]', 'restack from this branch down (default: current)')
+    .description('rebase a branch and its descendants onto their parents')
+    .action(async (branch?: string) => {
       introTitle('Stack restack')
-      const result = await restack()
+      const from = branch ?? getCurrentBranch()
+      const result = await restack(from)
       if (result.cleaned.length) {
         const { meta } = await buildForest()
         await taskLogCommand('git', ['checkout', meta.trunk])

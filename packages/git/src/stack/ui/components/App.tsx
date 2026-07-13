@@ -19,7 +19,7 @@ import { useStackActions } from '../hooks/useStackActions'
 
 export function App() {
   const { exit } = useApp()
-  const { cols, rows } = useTerminalSize()
+  const { rows } = useTerminalSize()
 
   const {
     nodes,
@@ -121,7 +121,7 @@ export function App() {
         actions.createPr(selectedNode.name, selectedNode.parent)
       }
     } else if (input === 'r') {
-      actions.restack()
+      if (selectedNode) actions.restack(selectedNode.name)
     } else if (input === 'R') {
       fetchPrs(nodes)
       run('refreshing…', async () => 'refreshed')
@@ -135,6 +135,8 @@ export function App() {
         setNewBranch(selectedNode.name)
         setRenaming(true)
       }
+    } else if (input === 'F') {
+      if (selectedNode) actions.fetch(selectedNode.name, selectedNode.isCurrent)
     } else if (input === 'u') {
       if (selectedNode && !selectedNode.isTrunk)
         actions.untrack(selectedNode.name)
@@ -144,9 +146,6 @@ export function App() {
   // The tree sizes to its branches but never takes more than ~40% of the screen;
   // beyond that it scrolls (overflow is clipped and Tree shows "↑/↓ N more").
   const treeMaxHeight = Math.max(4, Math.floor(rows * 0.4))
-
-  // Inner width available for tree content (inside border + paddingX=1).
-  const innerWidth = cols - 4 // 2 border chars + 2 padding chars
 
   const prState =
     !selectedNode || selectedNode.isTrunk
@@ -181,7 +180,6 @@ export function App() {
             syncing={syncing}
             hasTrackedBranches={hasTrackedBranches}
             maxHeight={treeMaxHeight}
-            innerWidth={innerWidth}
           />
 
           {creating && selectedNode ? (

@@ -55,16 +55,26 @@ export type RestackResult = {
 //   4. parentSha — last resort when neither fork-point nor merge-base returns
 //      a result.
 //
-// `only` limits the walk to a subset of branches (e.g. one stack) while keeping
-// global parent-before-child ordering. On the first conflict we stop and leave
-// the repo mid-rebase so the user can resolve and `git rebase --continue`.
-export async function restack(only?: string[]): Promise<RestackResult> {
+// When `from` names a tracked branch, only that branch and its descendants are
+// rebased. When omitted (or trunk/untracked), the entire stack is walked. On
+// the first conflict we stop and leave the repo mid-rebase so the user can
+// resolve and `git rebase --continue`.
+export async function restack(from?: string): Promise<RestackResult> {
   const meta = await readMeta()
+
+  // Capture the subtree before orphan cleanup — if `from` itself is deleted,
+  // its children (about to be re-parented) are still in the included set.
+  let included: Set<string> | null = null
+  if (from && from in meta.branches) {
+    included = new Set([from])
+    for (const name of stackOrder(meta)) {
+      if (included.has(meta.branches[name].parent)) included.add(name)
+    }
+  }
 
   // Clean up orphaned branches (refs deleted outside the TUI) before rebasing.
   const cleaned: string[] = []
-  for (const name of stackOrder(meta)) {
-    if (!meta.branches[name]) continue
+  for (const name of Object.keys(meta.branches)) {
     if (await resolveSha(name)) continue
     const grandparent = meta.branches[name].parent
     for (const info of Object.values(meta.branches)) {
@@ -75,8 +85,7 @@ export async function restack(only?: string[]): Promise<RestackResult> {
   }
   if (cleaned.length) await writeMeta(meta)
 
-  const limit = only ? new Set(only) : null
-  const order = stackOrder(meta).filter((b) => !limit || limit.has(b))
+  const order = stackOrder(meta).filter((b) => !included || included.has(b))
 
   const original = (
     await gitOutput(['rev-parse', '--abbrev-ref', 'HEAD'])
@@ -116,6 +125,10 @@ export async function restack(only?: string[]): Promise<RestackResult> {
     }
 
     if (parentTip === base) {
+      // Branch is already on the right base — still update parentSha so the
+      // log pane shows the correct boundary (matters after conflict resolution
+      // where the prior restack couldn't record the new parentSha).
+      info.parentSha = parentTip
       result.skipped.push(branch)
       continue
     }

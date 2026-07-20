@@ -65,7 +65,7 @@ export function useStackData() {
       setStatus(error instanceof Error ? error.message : String(error))
       setStatusVariant('error')
     }
-    await queryClient.invalidateQueries({ queryKey: queryKeys.all })
+    await queryClient.refetchQueries({ queryKey: queryKeys.all })
     setBusy(false)
   }, [])
 

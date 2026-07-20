@@ -33,7 +33,9 @@ export async function resolveSha(ref: string): Promise<string | null> {
 
 export async function isAncestor(commit: string, of: string): Promise<boolean> {
   try {
-    await execa('git', ['merge-base', '--is-ancestor', commit, of])
+    await execa('git', ['merge-base', '--is-ancestor', commit, of], {
+      env: READ_ONLY_GIT_ENV,
+    })
     return true
   } catch {
     return false

@@ -6,7 +6,6 @@ const TARGETS: Array<[path: string, options?: WatchOptions]> = [
   ['refs/remotes', { recursive: true }],
   ['HEAD'],
   ['devstack.json'],
-  ['index'],
 ]
 
 export function useGitWatch(

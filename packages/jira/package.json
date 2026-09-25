@@ -10,12 +10,12 @@
     "ts:check": "tsc --noEmit"
   },
   "dependencies": {
-    "@clack/prompts": "^1.6.0",
+    "@clack/prompts": "^1.8.1",
     "@types/voca": "^1.4.6",
     "colorize-template": "^1.0.0",
     "commander": "^15.0.0",
-    "execa": "^9.6.1",
-    "jira.js": "^5.2.1",
+    "execa": "^10.0.1",
+    "jira.js": "^5.4.0",
     "picocolors": "^1.1.1",
     "voca": "^1.4.1"
   }

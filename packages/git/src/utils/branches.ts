@@ -1,5 +1,5 @@
 import { execaSync } from 'execa'
-import { select, multiselect } from '@clack/prompts'
+import { select, multiselect, type CANCEL_SYMBOL } from '@clack/prompts'
 import { picocolors } from '#common/style'
 import { READ_ONLY_GIT_ENV } from './git'
 
@@ -24,8 +24,8 @@ const getBranches = () => {
   return stdout.split('\n').filter((line) => line.trim() !== '')
 }
 
-async function branchesChoices(multi: true): Promise<string[] | symbol>
-async function branchesChoices(multi?: false): Promise<string | symbol>
+async function branchesChoices(multi: true): Promise<string[] | typeof CANCEL_SYMBOL>
+async function branchesChoices(multi?: false): Promise<string | typeof CANCEL_SYMBOL>
 async function branchesChoices(multi = false) {
   const branches = getBranches().map((b) => {
     const [branchName, sha, subject, author, date, current] = b

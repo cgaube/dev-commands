@@ -24,8 +24,12 @@ const getBranches = () => {
   return stdout.split('\n').filter((line) => line.trim() !== '')
 }
 
-async function branchesChoices(multi: true): Promise<string[] | typeof CANCEL_SYMBOL>
-async function branchesChoices(multi?: false): Promise<string | typeof CANCEL_SYMBOL>
+async function branchesChoices(
+  multi: true,
+): Promise<string[] | typeof CANCEL_SYMBOL>
+async function branchesChoices(
+  multi?: false,
+): Promise<string | typeof CANCEL_SYMBOL>
 async function branchesChoices(multi = false) {
   const branches = getBranches().map((b) => {
     const [branchName, sha, subject, author, date, current] = b

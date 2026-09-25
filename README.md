@@ -34,6 +34,8 @@ each package's README for commands and options.
 
 - [`@devcommands/git`](./packages/git) — git workflow helpers (interactive
   checkout, cleanup, AI commits, PR checkout)
+- [`@devcommands/git-stack`](./packages/git-stack) — a TUI for stacked PRs that
+  uses the native GitHub `gh stack` extension
 - [`@devcommands/linear`](./packages/linear) — create git branches from Linear
   issues
 - [`@devcommands/packages`](./packages/packages) — install, update, and scaffold

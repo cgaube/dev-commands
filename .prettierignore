@@ -1,1 +1,4 @@
 bun.lock
+
+# Prettier parses .hbs as HTML and reflows the code inside
+*.hbs

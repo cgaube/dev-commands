@@ -53,7 +53,7 @@ jobs:
             [ -z "$file" ] && continue
 
             case "$file" in
-              common/*|package.json|bun.lockb|tsconfig.json)
+              common/*|package.json|bun.lock|tsconfig.base.json)
                 UPDATE_ALL=true
                 break
                 ;;

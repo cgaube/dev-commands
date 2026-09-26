@@ -6,10 +6,9 @@
     "ts:check": "bun run --workspaces ts:check",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint:check": "eslint --cache --max-warnings 0 .",
+    "lint:check": "oxlint --deny-warnings .",
     "lint": "bun run lint:check --fix",
-    "build": "bun run --workspaces build",
-    "compile": "bun run --workspaces compile && bun run cleanup",
+    "compile": "bun run --filter './packages/*' compile && bun run cleanup",
     "cleanup": "rm -f packages/*/.*.bun-build",
     "update:dependencies": "bun update -i -r"
   },
@@ -17,16 +16,10 @@
     "packages/*"
   ],
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
     "@types/bun": "^1.4.2",
-    "@typescript-eslint/eslint-plugin": "^8.70.1",
-    "@typescript-eslint/parser": "^8.70.1",
-    "eslint": "^10.11.0",
-    "eslint-config-prettier": "^10.1.8",
-    "globals": "^17.12.0",
     "lefthook": "^2.1.14",
+    "oxlint": "^1.85.0",
     "prettier": "^3.9.9",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.70.1"
+    "typescript": "^7.0.2"
   }
 }

@@ -2,7 +2,6 @@
 node_modules
 
 # Build output
-dist/
 bin/
 *.tsbuildinfo
 
@@ -25,4 +24,3 @@ Thumbs.db
 
 
 *.bun-build
-.eslintcache

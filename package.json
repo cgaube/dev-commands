@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "ts:check": "bun run --workspaces ts:check",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
     "lint:check": "oxlint --deny-warnings .",
     "lint": "bun run lint:check --fix",
     "compile": "bun run --filter './packages/*' compile && bun run cleanup",
@@ -18,8 +18,8 @@
   "devDependencies": {
     "@types/bun": "^1.4.2",
     "lefthook": "^2.1.14",
+    "oxfmt": "^0.70.0",
     "oxlint": "^1.85.0",
-    "prettier": "^3.9.9",
     "typescript": "^7.0.2"
   }
 }

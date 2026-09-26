@@ -16,7 +16,13 @@ const MANIFEST_FILES = [
 ]
 
 export type SourceId =
-  'bun' | 'pnpm' | 'yarn' | 'npm' | 'make' | 'just' | 'task'
+  | 'bun'
+  | 'pnpm'
+  | 'yarn'
+  | 'npm'
+  | 'make'
+  | 'just'
+  | 'task'
 
 export type ScriptEntry = {
   source: SourceId

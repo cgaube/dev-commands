@@ -4,5 +4,7 @@
   "tabWidth": 2,
   "printWidth": 80,
   "singleQuote": true,
-  "trailingComma": "all"
+  "trailingComma": "all",
+  "sortPackageJson": false,
+  "ignorePatterns": ["bun.lock", "*.hbs"]
 }

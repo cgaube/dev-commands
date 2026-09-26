@@ -98,9 +98,11 @@ const ALL_LINES: Line[] = [
   }),
   { type: 'blank' },
   { type: 'title', text: 'Badges' },
-  ...BADGE_ENTRIES.map(
-    ({ node, desc }): Line => ({ type: 'badge', node, desc }),
-  ),
+  ...BADGE_ENTRIES.map(({ node, desc }): Line => ({
+    type: 'badge',
+    node,
+    desc,
+  })),
 ]
 
 function renderLine(line: Line, i: number) {

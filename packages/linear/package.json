@@ -4,18 +4,17 @@
   "type": "module",
   "scripts": {
     "linear": "bun run src/main.ts",
-    "build": "bun run ts:check && bun build src/main.ts --outfile dist/linear",
     "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/linear",
     "compile:watch": "bun run compile --watch",
     "ts:check": "tsc --noEmit"
   },
   "dependencies": {
-    "@clack/prompts": "^1.6.0",
-    "@linear/sdk": "^87.0.0",
+    "@clack/prompts": "^1.8.1",
+    "@linear/sdk": "^96.0.0",
     "@types/voca": "^1.4.6",
     "colorize-template": "^1.0.0",
     "commander": "^15.0.0",
-    "execa": "^9.6.1",
+    "execa": "^10.0.1",
     "picocolors": "^1.1.1",
     "voca": "^1.4.1"
   }

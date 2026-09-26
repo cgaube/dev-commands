@@ -7,11 +7,11 @@ output:
 pre-commit:
   parallel: true
   jobs:
-    - name: prettier
+    - name: oxfmt
       glob: '*.{js,ts,jsx,tsx,json,yml,yaml,md}'
-      run: bunx prettier --write {staged_files}
+      run: bunx oxfmt --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
-    - name: eslint
+    - name: oxlint
       glob: '*.{js,ts,jsx,tsx}'
       run: bun run lint {staged_files}
       stage_fixed: true

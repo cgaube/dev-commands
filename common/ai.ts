@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spinner } from '@clack/prompts'
-import { execa, ExecaError, Options } from 'execa'
+import { execa, ExecaError } from 'execa'
 import { colorize, exitWithError } from './style'
 
 export type AIProvider = {
@@ -10,7 +10,10 @@ export type AIProvider = {
   run: (prompt: string, input?: string) => Promise<string>
 }
 
-function execOptions(input?: string): Pick<Options, 'input' | 'stdin'> {
+function execOptions(input?: string): {
+  input?: string
+  stdin: 'pipe' | 'ignore'
+} {
   if (input !== undefined) {
     return { input, stdin: 'pipe' }
   }

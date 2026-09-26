@@ -9,7 +9,8 @@ experience across all tools:
 - `execa` – for executing commands
 - `commander` – for parsing and managing main commands and subcommands
 
-Shared utility methods are available in the `common` folder.
+Shared utility methods are available in the `common` folder, which is the
+`@devcommands/common` workspace package.
 
 These CLI applications are designed to be invoked through a **root binary**
 called `dev-cli`, for example:
@@ -43,6 +44,11 @@ packages/[NAME]/src/main.ts
 
 Copy the same packages.json script by changing the name at the right places
 Remember to also copy the tsconfig.json file
+
+Import aliases (`#common/*`, `#src/*`) are defined in each package's
+`tsconfig.json` `paths`, so keep that block when copying it. They can't live in
+`tsconfig.base.json`: TypeScript 7 removed `baseUrl`, and Bun expands
+`${configDir}` relative to the base file instead of the extending one.
 
 Always add a `README.md` at `packages/[NAME]/README.md` describing what the
 package does, its commands and options, and any required configuration.

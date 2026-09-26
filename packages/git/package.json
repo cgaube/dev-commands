@@ -4,25 +4,24 @@
   "type": "module",
   "scripts": {
     "git": "bun run src/main.ts",
-    "build": "bun run ts:check && bun build src/main.ts --target bun --outfile dist/git",
     "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/git",
     "compile:watch": "bun run compile --watch",
     "ts:check": "tsc --noEmit"
   },
   "dependencies": {
-    "@clack/prompts": "^1.6.0",
+    "@clack/prompts": "^1.8.1",
     "@inkjs/ui": "^2.0.0",
-    "@tanstack/react-query": "^5.101.2",
+    "@tanstack/react-query": "^5.103.2",
     "colorize-template": "^1.0.0",
     "commander": "^15.0.0",
-    "execa": "^9.6.1",
-    "ink": "^7.1.0",
+    "execa": "^10.0.1",
+    "ink": "^7.1.1",
     "ink-text-input": "^6.0.0",
     "picocolors": "^1.1.1",
-    "react": "^19.2.7"
+    "react": "^19.3.0"
   },
   "devDependencies": {
-    "@types/react": "^19.2.17",
-    "react-devtools-core": "^7.0.1"
+    "@types/react": "^19.3.0",
+    "react-devtools-core": "^8.0.0"
   }
 }

@@ -53,7 +53,11 @@ jobs:
             [ -z "$file" ] && continue
 
             case "$file" in
-              common/*|package.json|bun.lock|tsconfig.base.json)
+              # Shared code and build config: every package changes.
+              # The root package.json and bun.lock are not here: the root
+              # has only dev tools, and a package's dependencies are in
+              # packages/<name>/package.json (matched below).
+              common/*|tsconfig.base.json)
                 UPDATE_ALL=true
                 break
                 ;;

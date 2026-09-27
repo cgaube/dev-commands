@@ -3,12 +3,6 @@ import { select, multiselect, type CANCEL_SYMBOL } from '@clack/prompts'
 import { picocolors } from '#common/style'
 import { READ_ONLY_GIT_ENV } from './git'
 
-const getCurrentBranch = () => {
-  return execaSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
-    env: READ_ONLY_GIT_ENV,
-  }).stdout.trim()
-}
-
 const getBranches = () => {
   const { stdout } = execaSync(
     'git',
@@ -74,4 +68,4 @@ async function branchesChoices(multi = false) {
   }
 }
 
-export { getCurrentBranch, getBranches, branchesChoices }
+export { getBranches, branchesChoices }

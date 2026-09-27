@@ -3,7 +3,6 @@ import { createCleanupCommand } from './cleanup'
 import { createCommitCommand } from './commit'
 import { createPrCommand } from './pr'
 import { createReviewCommand } from './review'
-import { createStackCommand } from './stack'
 
 export const commands = [
   createCheckoutCommand,
@@ -11,5 +10,4 @@ export const commands = [
   createCleanupCommand,
   createCommitCommand,
   createReviewCommand,
-  createStackCommand,
 ]

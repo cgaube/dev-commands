@@ -7,9 +7,6 @@ This package does not keep stack data of its own. It reads the stacks that
 `gh stack` records in `.git/gh-stack`, and it runs `gh stack` commands for all
 changes. Thus you can use `gh stack` directly and this TUI together.
 
-For the older tree-based stack that this repo tracks itself, see `dev git stack`
-in [`@devcommands/git`](../git).
-
 ## Requirements
 
 - [GitHub CLI](https://cli.github.com/) (`gh`), logged in.

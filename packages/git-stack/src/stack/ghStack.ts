@@ -91,10 +91,13 @@ export async function isRebaseInProgress(dir?: string): Promise<boolean> {
 
 // Run a gh stack command without a terminal. gh-stack then does not show its
 // own prompts. Returns the result message.
-export async function ghStack(args: string[]): Promise<string> {
+export async function ghStack(
+  args: string[],
+  env?: Record<string, string>,
+): Promise<string> {
   let output: string
   try {
-    const { stdout, stderr } = await execa('gh', ['stack', ...args])
+    const { stdout, stderr } = await execa('gh', ['stack', ...args], { env })
     output = `${stdout}\n${stderr}`
   } catch (error: any) {
     const output = `${error.stdout ?? ''}\n${error.stderr ?? ''}`

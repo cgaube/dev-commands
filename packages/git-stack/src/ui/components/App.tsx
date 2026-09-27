@@ -23,10 +23,10 @@ type Modal =
   | null
 
 // The keys that change a stack.
-const STACK_KEYS = new Set(['n', 'r', 'S', 'P'])
+const STACK_KEYS = new Set(['n', 'r', 'S', 'P', 'p'])
 
-const REBASE_HINT =
-  'rebase in progress — run gh stack rebase --continue or --abort in a terminal'
+// The legend shows how to finish the rebase.
+const REBASE_HINT = 'finish the rebase first'
 
 function Centered({ children }: { children: ReactNode }) {
   return (
@@ -138,12 +138,19 @@ export function App({ warning }: { warning: string | null }) {
     if (!selectedRow) return
     const { branch, stack, stacks } = selectedRow
 
-    if (info.return || key === 'c') return actions.checkout(selectedRow.name)
+    if (info.return || key === 'c') {
+      // Sync deletes the local branch of a merged PR, but the tree keeps it.
+      if (branch && !branch.exists) {
+        return actions.notice(`${branch.name} does not exist locally`)
+      }
+      return actions.checkout(selectedRow.name)
+    }
     if (key === 'o' && branch) return actions.openPr(branch.name)
 
-    // A conflict needs a person. The TUI does not change the stacks until
-    // the rebase is done in a terminal.
+    // A conflict needs a person. Until the rebase is done, r continues it,
+    // and the other stack keys do nothing.
     if (STACK_KEYS.has(key) && rebaseInProgress) {
+      if (key === 'r') return actions.continueRebase()
       return actions.notice(REBASE_HINT)
     }
 
@@ -152,8 +159,8 @@ export function App({ warning }: { warning: string | null }) {
       if (key === 'n') setModal({ type: 'init', base: selectedRow.name })
       else if (key === 'r') actions.rebase(stacks)
       else if (key === 'S') actions.sync(stacks)
-      else if (key === 'P') {
-        actions.notice('select a branch — P acts on one stack')
+      else if (key === 'P' || key === 'p') {
+        actions.notice(`select a branch — ${key} acts on one stack`)
       }
       return
     }
@@ -168,6 +175,10 @@ export function App({ warning }: { warning: string | null }) {
       // branch does not exist locally, use the top branch of the stack.
       const target = branch.exists ? branch.name : topExistingBranch(stack)
       if (target) actions.submit(target)
+    } else if (key === 'p') {
+      if (branch.isMerged) return actions.notice(`${branch.name} is merged`)
+      const target = branch.exists ? branch.name : topExistingBranch(stack)
+      if (target) actions.submitUpTo(stack, target, branch.name)
     }
   })
 

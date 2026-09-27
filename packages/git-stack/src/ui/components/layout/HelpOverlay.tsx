@@ -43,7 +43,8 @@ const GROUPS: Group[] = [
     shortcuts: [
       ['n', 'add branch', 'gh stack add <name> on top'],
       ['P', 'submit', 'gh stack submit --auto (new PRs are drafts)'],
-      ['r', 'rebase', 'gh stack rebase, no push'],
+      ['p', 'submit to here', 'push, then gh stack link up to this branch'],
+      ['r', 'rebase', 'gh stack rebase, no push; continues a conflict'],
       ['S', 'sync', 'gh stack sync --prune, after a merge on GitHub'],
       ['o', 'open PR', 'open PR in browser'],
     ],

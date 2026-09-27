@@ -23,6 +23,8 @@ export function BranchRow({ row, isSelected, pr }: Props) {
   const cursor = isSelected ? '❯ ' : '  '
   const indent = '  '.repeat(row.depth)
   const marker = row.isCurrent ? '●' : branch ? '○' : '⌂'
+  // A merged branch stays in the tree, as on GitHub, but less visible.
+  const dim = !!branch?.isMerged && !isSelected
 
   return (
     <Box backgroundColor={isSelected ? 'gray' : undefined}>
@@ -34,6 +36,7 @@ export function BranchRow({ row, isSelected, pr }: Props) {
         <Text
           color={row.isCurrent ? 'green' : isSelected ? 'cyan' : undefined}
           bold={isSelected}
+          dimColor={dim}
         >
           {marker}
         </Text>
@@ -43,6 +46,7 @@ export function BranchRow({ row, isSelected, pr }: Props) {
         <Text
           color={isSelected ? 'cyan' : undefined}
           bold={isSelected}
+          dimColor={dim}
           wrap="truncate-middle"
         >
           {row.name}

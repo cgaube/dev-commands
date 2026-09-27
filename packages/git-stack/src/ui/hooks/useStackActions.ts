@@ -6,7 +6,7 @@ import {
   PushFailedError,
   readStacks,
 } from '#src/stack/ghStack'
-import { currentBranch } from '#src/utils/git'
+import { conflictedFiles, currentBranch } from '#src/utils/git'
 import { stackLabel, type LocalStack } from '#src/stack/model'
 import { topExistingBranch } from '../rows'
 
@@ -26,21 +26,26 @@ function plural(count: number): string {
 
 // Run a gh stack command. Replace the long gh-stack messages with a short
 // message that tells what to do next.
-async function ghStackOrHint(args: string[]): Promise<string> {
+async function ghStackOrHint(
+  args: string[],
+  env?: Record<string, string>,
+): Promise<string> {
   try {
-    return await ghStack(args)
+    return await ghStack(args, env)
   } catch (error) {
     // A conflict needs a person, so the TUI does not resolve it. gh stack
-    // rebase stops in the middle of the rebase.
+    // rebase stops in the middle of the rebase, and r continues it. The
+    // legend tells what to do, so name only the files here.
     if (await isRebaseInProgress()) {
-      throw new Error(
-        'conflict — resolve it in a terminal, then gh stack rebase --continue',
-        { cause: error },
-      )
+      const files = await conflictedFiles()
+      if (!files.length) throw error
+      const shown = files.slice(0, 3).join(', ')
+      const more = files.length > 3 ? ` +${files.length - 3}` : ''
+      throw new Error(`conflict in ${shown}${more}`, { cause: error })
     }
-    // gh stack sync restores the branches on a conflict.
+    // gh stack sync restores the branches on a conflict. r stops at it.
     if (error instanceof Error && /conflict/i.test(error.message)) {
-      throw new Error('conflict — run gh stack rebase in a terminal', {
+      throw new Error('conflict — press r to rebase and stop at it', {
         cause: error,
       })
     }
@@ -138,6 +143,15 @@ export function useStackActions(run: Run) {
 
       rebase,
 
+      // Continue a rebase that stopped on a conflict. Without a terminal, git
+      // cannot open an editor for the commit message, so keep the message.
+      // gh stack stops again at the next conflict, if there is one.
+      continueRebase: () =>
+        run('continuing rebase…', async () => {
+          await ghStackOrHint(['rebase', '--continue'], { GIT_EDITOR: 'true' })
+          return 'rebased — press P to push'
+        }),
+
       checkout: (name: string) =>
         run(`checking out ${name}…`, async () => {
           await execa('git', ['checkout', name])
@@ -175,6 +189,37 @@ export function useStackActions(run: Run) {
         run('submitting stack…', async () => {
           await ensureOn(branch)
           return (await ghStackOrHint(['submit', '--auto'])) || 'submitted'
+        }),
+
+      // Push the stack, then open PRs from the bottom up to `branch` only.
+      // gh stack link works on GitHub alone: it opens the missing PRs as
+      // drafts, and adds them to the stack of the PRs below. The branches
+      // above stay without a PR. The next submit adds them to the same stack.
+      // Push first: it is not known if link force-pushes rebased branches.
+      submitUpTo: (stack: LocalStack, checkout: string, branch: string) =>
+        run(`submitting up to ${branch}…`, async () => {
+          const end = stack.branches.findIndex((b) => b.name === branch)
+          const open = stack.branches
+            .slice(0, end + 1)
+            .filter((b) => !b.isMerged)
+          const branches = open.map((b) => {
+            // A branch that is gone locally can only be linked by its PR.
+            if (b.exists) return b.name
+            if (b.prNumber) return String(b.prNumber)
+            throw new Error(`${b.name} does not exist locally`)
+          })
+          await ensureOn(checkout)
+          await ghStackOrHint(['push'])
+          // The PRs are already open. The push updated them.
+          if (open.every((b) => b.prNumber)) return `pushed up to ${branch}`
+          // A stack on GitHub takes its number first: link then adds only
+          // the branches that are not in it. Without a number, link makes a
+          // new stack.
+          const args = stack.number
+            ? ['link', String(stack.number), ...branches]
+            : ['link', '--base', stack.trunk, ...branches]
+          await ghStackOrHint(args)
+          return `submitted up to ${branch} — P submits the rest`
         }),
 
       notice: (message: string) => run(message, async () => message),

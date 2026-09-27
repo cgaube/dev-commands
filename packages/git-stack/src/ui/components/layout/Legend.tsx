@@ -12,6 +12,7 @@ const STACK: Hint[] = [
   ['n', 'add'],
   ['r', 'rebase'],
   ['P', 'submit'],
+  ['p', 'submit to here'],
   ['S', 'sync'],
 ]
 
@@ -31,8 +32,8 @@ export function Legend({ hasStacks, rebaseInProgress }: Props) {
     return (
       <Box justifyContent="center" paddingX={1} marginBottom={1} flexShrink={0}>
         <Text color="yellow">
-          rebase in progress — in a terminal: gh stack rebase --continue or
-          --abort
+          rebase in progress — fix the files, git add them, then press r (to
+          stop: gh stack rebase --abort)
         </Text>
       </Box>
     )

@@ -42,6 +42,7 @@ dev git-stack log    # print all local stacks
 | start a stack from `main`   | `n`                  |
 | add a branch to a stack     | `n`                  |
 | push the stack and open PRs | `P`                  |
+| open PRs up to one branch   | `p`                  |
 | a PR was merged on GitHub   | `S`                  |
 | `main` changed              | `S`, or `r` then `P` |
 
@@ -60,20 +61,34 @@ the sync. Sync does these steps:
 When all the PRs of a stack are merged, `S` also removes the stack from local
 tracking (`gh stack unstack --local`). The stack stays on GitHub.
 
+**Open PRs for part of a stack:** `p` on a branch opens PRs from the bottom of
+the stack up to that branch. The branches above it get no PR. For example, with
+`main → a → b → c`, press `p` on `b` to open PRs for `a` and `b` only:
+
+1. It pushes all the branches of the stack (`gh stack push`), `c` also.
+2. It runs `gh stack link --base main a b`. This opens the missing PRs as
+   drafts, and makes a stack of them on GitHub.
+
+`c` stays in the local stack, so `r` and `S` still rebase it. Until the next
+`P`, the stack label shows `local`, because `gh stack link` does not change the
+local stack data. When `c` is ready, press `P`: it opens the PR of `c` and adds
+it to the same stack on GitHub.
+
 **Rebase without a push:** `r` fetches `main` and rebases the stack onto it.
 Nothing is pushed. Check the result, then press `P` to push.
 
 **Conflicts:** when sync finds a conflict, it stops and restores the branches.
-When `r` finds a conflict, it stops in the middle of the rebase. In both cases,
-resolve the conflict in a terminal:
+Press `r` to rebase: it stops in the middle of the rebase, at the conflict.
+Then:
 
-```bash
-gh stack rebase             # stops at the conflict
-git add <files>             # after you edit the files
-gh stack rebase --continue  # or: gh stack rebase --abort
-```
+1. Edit the files with the conflict.
+2. Mark them as resolved: `git add <files>`.
+3. Press `r` again. It continues the rebase (`gh stack rebase --continue`) and
+   keeps the commit messages. When there is another conflict, it stops again.
+4. When the rebase is done, press `P` to push.
 
-While a rebase is in progress, the TUI does not change the stacks.
+While a rebase is in progress, the other stack keys do nothing. To stop the
+rebase and restore the branches, run `gh stack rebase --abort` in a terminal.
 
 ## Commands
 
@@ -110,6 +125,7 @@ command runs, the TUI checks out the selected branch.
 | --- | ---------------------------------------------------------- |
 | `n` | add a branch on top of the stack (`gh stack add`)          |
 | `P` | push and open the PRs as drafts (`gh stack submit --auto`) |
+| `p` | push, and open PRs up to this branch (`gh stack link`)     |
 | `r` | rebase the stack without a push (`gh stack rebase`)        |
 | `S` | sync the stack (`gh stack sync --prune`)                   |
 | `o` | open the PR of the branch in the browser                   |
@@ -127,7 +143,9 @@ command runs, the TUI checks out the selected branch.
 | `?`               | show the help                           |
 | `q` / `esc`       | quit                                    |
 
-The tree does not show a merged branch that is deleted locally.
+The tree keeps a merged branch after `S` deletes it locally, as GitHub does. It
+shows dimmed, with the `merged` badge. You cannot check it out, but `o` opens
+its PR. The branch leaves the tree when `S` removes the stack.
 
 **Other people's commits:** `S` and `P` force-push, as `gh stack` does. When
 someone else pushed to your PR branch, get their commits first, or the push
@@ -161,7 +179,8 @@ Print the tree of local stacks without the TUI.
 ## Limits
 
 - The TUI does not merge PRs. Merge on GitHub.
-- The TUI does not resolve conflicts. Use `gh stack rebase` in a terminal.
+- The TUI does not resolve conflicts. Edit the files, `git add` them, then press
+  `r`.
 - `gh stack` stacks are linear. A branch has one parent and one child. To put a
   branch in the middle of a stack, use `gh stack modify` in a terminal.
 - The format of `.git/gh-stack` is not documented. The TUI reads schema version

@@ -40,6 +40,12 @@ export async function currentBranch(): Promise<string> {
   return (await gitOutput(['rev-parse', '--abbrev-ref', 'HEAD'])).trim()
 }
 
+// The files that still have a merge conflict, during a rebase.
+export async function conflictedFiles(): Promise<string[]> {
+  const out = await gitOutput(['diff', '--name-only', '--diff-filter=U'])
+  return out.split('\n').filter(Boolean)
+}
+
 export async function isWorkingTreeDirty(): Promise<boolean> {
   const out = await gitOutput(['status', '--porcelain'])
   return out.split(/\r?\n/).some((l) => l.trim().length > 0)

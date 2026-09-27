@@ -120,17 +120,9 @@ export async function loadStackState(): Promise<StackState> {
   return {
     gitDir: dir,
     currentBranch: current,
-    stacks: built.map(withoutDoneBranches),
+    stacks: built,
     rebaseInProgress,
   }
-}
-
-// A merged branch that is deleted locally is done: you cannot check it out,
-// and gh stack does not rebase onto it. Remove it from the view. When all the
-// branches are done, keep them, so that a sync can remove the stack.
-function withoutDoneBranches(stack: LocalStack): LocalStack {
-  const open = stack.branches.filter((b) => b.exists || !b.isMerged)
-  return open.length ? { ...stack, branches: open } : stack
 }
 
 // The stack label that the TUI and `log` show, e.g. "#12 · main".

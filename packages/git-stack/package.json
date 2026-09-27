@@ -4,7 +4,6 @@
   "type": "module",
   "scripts": {
     "git-stack": "bun run src/main.ts",
-    "build": "bun run ts:check && bun build src/main.ts --target bun --outfile dist/git-stack",
     "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/git-stack",
     "compile:watch": "bun run compile --watch",
     "ts:check": "tsc --noEmit"

@@ -1,7 +1,11 @@
 export const COMMIT_PROMPT = `You are writing a git commit message. The input below is the staged diff for the entire working tree (output of \`git diff --cached\`, optionally with a stat header when the diff was truncated).
 
-Format (exact):
-- Line 1: imperative subject, 50 chars max, no trailing period.
+The project instructions (CLAUDE.md or AGENTS.md) can define a format for commit titles. If they do, you MUST use that format for line 1. It always overrides the default title rules below. Get the ticket key from the branch name when one is given.
+
+Write the message in ASD-STE100 Simplified Technical English: short sentences, with line breaks, simple words, active voice. The title format from the project instructions still applies.
+
+Default format
+- Line 1: imperative subject, 50 chars max, no trailing period. (use only if the project instructions define no title format)
 - Line 2: blank.
 - Lines 3+: 1-3 short lines describing WHY the change was made, not WHAT.
 

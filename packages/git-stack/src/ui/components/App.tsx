@@ -25,6 +25,9 @@ type Modal =
 // The keys that change a stack.
 const STACK_KEYS = new Set(['n', 'r', 'S', 'P', 'p'])
 
+// The terminal width at which the stack list and the content go side by side.
+const WIDE_MIN_COLS = 120
+
 // The legend shows how to finish the rebase.
 const REBASE_HINT = 'finish the rebase first'
 
@@ -43,7 +46,7 @@ function Centered({ children }: { children: ReactNode }) {
 
 export function App({ warning }: { warning: string | null }) {
   const { exit } = useApp()
-  const { rows: termRows } = useTerminalSize()
+  const { cols: termCols, rows: termRows } = useTerminalSize()
 
   const {
     state,
@@ -184,7 +187,12 @@ export function App({ warning }: { warning: string | null }) {
 
   // The stack list gets the height of its lines, but not more than ~40% of
   // the screen. Then it scrolls.
-  const listMaxHeight = Math.max(4, Math.floor(termRows * 0.4))
+  // On a wide terminal, the stack list and the content sit side by side and
+  // the list uses the full height.
+  const wide = termCols >= WIDE_MIN_COLS
+  const listMaxHeight = wide
+    ? undefined
+    : Math.max(4, Math.floor(termRows * 0.4))
 
   const selectedPrIdx = selectedRow?.branch
     ? branchNames.indexOf(selectedRow.name)
@@ -241,13 +249,14 @@ export function App({ warning }: { warning: string | null }) {
       {showHelp ? (
         <HelpOverlay scroll={helpScroll} />
       ) : (
-        <>
+        <Box flexGrow={1} flexDirection={wide ? 'row' : 'column'} minHeight={0}>
           <StackPane
             rows={rows}
             selected={selected}
             prs={prs}
             syncing={syncing}
             maxHeight={listMaxHeight}
+            side={wide}
           />
 
           {middle ? (
@@ -260,7 +269,7 @@ export function App({ warning }: { warning: string | null }) {
               pr={prState}
             />
           )}
-        </>
+        </Box>
       )}
 
       <StatusBar busy={busy} status={status} variant={statusVariant} />

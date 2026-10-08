@@ -10,12 +10,21 @@ type Props = {
   selected: number
   prs: Record<string, PrInfo | null>
   syncing: boolean
-  maxHeight: number
+  maxHeight?: number
+  // Side-by-side layout: take half of the width and the full height.
+  side?: boolean
 }
 
 // The stack list. It gets the height of its branches up to maxHeight. Then it
 // clips and scrolls, and StackList shows "↑/↓ N more".
-export function StackPane({ rows, selected, prs, syncing, maxHeight }: Props) {
+export function StackPane({
+  rows,
+  selected,
+  prs,
+  syncing,
+  maxHeight,
+  side,
+}: Props) {
   const [listRef, listRows] = useMeasuredHeight()
 
   return (
@@ -25,6 +34,7 @@ export function StackPane({ rows, selected, prs, syncing, maxHeight }: Props) {
       borderColor="gray"
       paddingX={1}
       flexShrink={0}
+      width={side ? '50%' : undefined}
       maxHeight={maxHeight}
       overflow="hidden"
     >

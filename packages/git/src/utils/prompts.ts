@@ -1,13 +1,22 @@
 export const COMMIT_PROMPT = `You are writing a git commit message. The input below is the staged diff for the entire working tree (output of \`git diff --cached\`, optionally with a stat header when the diff was truncated).
 
-The project instructions (CLAUDE.md or AGENTS.md) can define a format for commit titles. If they do, you MUST use that format for line 1. It always overrides the default title rules below. Get the ticket key from the branch name when one is given.
+The project instructions (CLAUDE.md or AGENTS.md) can define a format for commit titles. If they do, you MUST use that format for line 1. It overrides the default title rules below. It does NOT change the body rules. Get the ticket key from the branch name when one is given.
 
-Write the message in ASD-STE100 Simplified Technical English: short sentences, with line breaks, simple words, active voice. The title format from the project instructions still applies.
+Write the message in ASD-STE100 Simplified Technical English: short sentences, simple words, active voice. The title format from the project instructions still applies.
 
-Default format
-- Line 1: imperative subject, 50 chars max, no trailing period. (use only if the project instructions define no title format)
-- Line 2: blank.
-- Lines 3+: 1-3 short lines describing WHY the change was made, not WHAT.
+Title (line 1)
+- Imperative subject, 50 chars max, no trailing period. Use this only if the project instructions define no title format.
+
+Body (always applies)
+- Line 2 is blank.
+- Write 1-3 lines. Use up to 5 only when the change is risky or has several effects that matter.
+- Write one short sentence per line.
+- Say what behavior is different now. Do not list files or lines. The diff shows those.
+- Give a reason only if the diff or the branch name shows it. Never guess a reason.
+- If no reason is visible, say only what the change does. This is correct.
+- Do not add filler. Every line must give a new fact. Do not end with a summary line.
+- Do not describe the old code or the old prompt.
+- Do not use bullets, headings, or paragraphs.
 
 Output only the commit message. No preamble, no code fences, no quotes.`
 

@@ -1,0 +1,64 @@
+import { Box, Text } from 'ink'
+import { Spinner } from '@inkjs/ui'
+import type { Row } from '../../rows'
+import type { PrInfo } from '#src/stack/pr'
+import type { BranchLog } from '#src/stack/log'
+import { Tabs, type TabMode } from '../Tabs'
+import { LogPane } from '../LogPane'
+import { InfoPane } from '../InfoPane'
+import { useMeasuredHeight } from '../../hooks/useMeasuredHeight'
+
+type PrState = PrInfo | null | 'loading' | undefined
+
+type Props = {
+  right: TabMode
+  selectedRow?: Row
+  log: BranchLog | null
+  pr: PrState
+}
+
+export function ContentArea({ right, selectedRow, log, pr }: Props) {
+  const [paneRef, paneLines] = useMeasuredHeight()
+
+  let content
+  if (right === 'log') {
+    content = log ? (
+      <LogPane
+        log={log}
+        maxLines={paneLines}
+        needsRebase={!!selectedRow?.branch?.needsRebase}
+      />
+    ) : (
+      <Box gap={1}>
+        <Spinner />
+        <Text dimColor>loading…</Text>
+      </Box>
+    )
+  } else {
+    content = <InfoPane row={selectedRow} pr={pr} />
+  }
+
+  return (
+    <Box
+      flexGrow={1}
+      flexDirection="column"
+      borderStyle="round"
+      borderColor="gray"
+      paddingX={1}
+      minHeight={0}
+      overflow="hidden"
+    >
+      <Tabs active={right} />
+      <Box
+        ref={paneRef}
+        marginTop={1}
+        flexDirection="column"
+        flexGrow={1}
+        minHeight={0}
+        overflow="hidden"
+      >
+        {content}
+      </Box>
+    </Box>
+  )
+}

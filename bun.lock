@@ -43,6 +43,26 @@
         "react-devtools-core": "^7.0.1",
       },
     },
+    "packages/git-tui": {
+      "name": "@devcommands/git-tui",
+      "version": "0.0.0",
+      "dependencies": {
+        "@clack/prompts": "^1.6.0",
+        "@inkjs/ui": "^2.0.0",
+        "@tanstack/react-query": "^5.101.2",
+        "colorize-template": "^1.0.0",
+        "commander": "^15.0.0",
+        "execa": "^9.6.1",
+        "ink": "^7.1.0",
+        "ink-text-input": "^6.0.0",
+        "picocolors": "^1.1.1",
+        "react": "^19.2.7",
+      },
+      "devDependencies": {
+        "@types/react": "^19.2.17",
+        "react-devtools-core": "^7.0.1",
+      },
+    },
     "packages/jira": {
       "name": "@devcommands/jira",
       "version": "0.0.0",
@@ -118,6 +138,8 @@
     "@devcommands/git": ["@devcommands/git@workspace:packages/git"],
 
     "@devcommands/git-stack": ["@devcommands/git-stack@workspace:packages/git-stack"],
+
+    "@devcommands/git-tui": ["@devcommands/git-tui@workspace:packages/git-tui"],
 
     "@devcommands/jira": ["@devcommands/jira@workspace:packages/jira"],
 
@@ -528,6 +550,8 @@
     "zod": ["zod@4.6.5", "", {}, "sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q=="],
 
     "@devcommands/git-stack/execa": ["execa@9.6.1", "", { "dependencies": { "@sindresorhus/merge-streams": "^4.0.0", "cross-spawn": "^7.0.6", "figures": "^6.1.0", "get-stream": "^9.0.0", "human-signals": "^8.0.1", "is-plain-obj": "^4.1.0", "is-stream": "^4.0.1", "npm-run-path": "^6.0.0", "pretty-ms": "^9.2.0", "signal-exit": "^4.1.0", "strip-final-newline": "^4.0.0", "yoctocolors": "^2.1.1" } }, "sha512-9Be3ZoN4LmYR90tUoVu2te2BsbzHfhJyfEiAVfz7N5/zv+jduIfLrV2xdQXOHbaD6KgpGdO9PRPM1Y4Q9QkPkA=="],
+
+    "@devcommands/git-tui/execa": ["execa@9.6.1", "", { "dependencies": { "@sindresorhus/merge-streams": "^4.0.0", "cross-spawn": "^7.0.6", "figures": "^6.1.0", "get-stream": "^9.0.0", "human-signals": "^8.0.1", "is-plain-obj": "^4.1.0", "is-stream": "^4.0.1", "npm-run-path": "^6.0.0", "pretty-ms": "^9.2.0", "signal-exit": "^4.1.0", "strip-final-newline": "^4.0.0", "yoctocolors": "^2.1.1" } }, "sha512-9Be3ZoN4LmYR90tUoVu2te2BsbzHfhJyfEiAVfz7N5/zv+jduIfLrV2xdQXOHbaD6KgpGdO9PRPM1Y4Q9QkPkA=="],
 
     "cross-spawn/path-key": ["path-key@3.1.1", "", {}, "sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q=="],
 

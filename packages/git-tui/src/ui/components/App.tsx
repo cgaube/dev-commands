@@ -39,12 +39,25 @@ const CHANGE_KEYS = new Set(['n', 'r', 'S', 'P', 'p', 'd'])
 // The terminal width at which the stack list and the content go side by side.
 const WIDE_MIN_COLS = 120
 
-// The terminal width at which the stack list takes a quarter of the width,
+// The terminal width at which the stack list takes about a third of the width,
 // not half, and the content gets the rest.
 const VERY_WIDE_MIN_COLS = 150
 
 // The legend shows how to finish the rebase.
 const REBASE_HINT = 'finish the rebase first'
+
+// GitHub does not open a PR for a branch without commits after its parent,
+// and gh stack then pushes without a PR, with no error. Find such a branch
+// before a submit. A merged branch, a branch that is gone, or a branch with a
+// PR needs no new PR.
+function emptyBranch(branches: Branch[]): string | null {
+  const empty = branches.find(
+    (b) => !b.isMerged && b.exists && !b.prNumber && b.ahead === 0,
+  )
+  return empty
+    ? `${empty.name} has no commits after ${empty.parent} — commit first`
+    : null
+}
 
 function Centered({ children }: { children: ReactNode }) {
   return (
@@ -96,6 +109,12 @@ export function App({ warning }: { warning: string | null }) {
     }
     return map
   }, [rows, prsQuery.data])
+
+  // All the inputs ask for a branch name. A branch name cannot contain
+  // spaces, so show them as "-" while the user types. Drop the leading
+  // spaces: git does not accept a name that starts with "-".
+  const changeBranchName = (value: string) =>
+    setInput(value.replace(/^\s+/, '').replace(/\s+/g, '-'))
 
   const closeModal = () => {
     setModal(null)
@@ -153,7 +172,7 @@ export function App({ warning }: { warning: string | null }) {
     })
   }
 
-  const rebaseInProgress = !!state?.rebaseInProgress
+  const rebase = state?.rebase ?? null
 
   useInput((key, info) => {
     if (info.ctrl && key === 'c') return exit()
@@ -208,8 +227,8 @@ export function App({ warning }: { warning: string | null }) {
 
     // A conflict needs a person. Until the rebase is done, r continues it,
     // and the other keys that change branches do nothing.
-    if (CHANGE_KEYS.has(key) && rebaseInProgress) {
-      if (key === 'r') return actions.continueRebase()
+    if (CHANGE_KEYS.has(key) && rebase) {
+      if (key === 'r') return actions.continueRebase(rebase)
       return actions.notice(REBASE_HINT)
     }
 
@@ -228,8 +247,15 @@ export function App({ warning }: { warning: string | null }) {
           return actions.notice('check out another branch first')
         }
         confirmDelete(branch)
-      } else if (key === 'r' || key === 'S') {
-        actions.notice('not a stack — press n to start one')
+      } else if (key === 'r') {
+        if (!branch.needsRebase) {
+          return actions.notice(
+            `${branch.name} is up to date with ${branch.parent}`,
+          )
+        }
+        actions.rebasePlain(branch.name, branch.parent)
+      } else if (key === 'S') {
+        actions.notice('not a stack — r rebases, p pushes')
       }
       return
     }
@@ -254,7 +280,7 @@ export function App({ warning }: { warning: string | null }) {
             : { type: 'init', base },
         )
       } else if (key === 'r') actions.rebase(stacks)
-      else if (key === 'S') actions.sync(stacks)
+      else if (key === 'S') actions.sync(stacks, selectedRow.name)
       else if (key === 'P' || key === 'p') {
         actions.notice(`select a branch — ${key} acts on one stack`)
       }
@@ -267,12 +293,17 @@ export function App({ warning }: { warning: string | null }) {
     } else if (key === 'r') actions.rebase([stack])
     else if (key === 'S') actions.sync([stack])
     else if (key === 'P') {
+      const empty = emptyBranch(stack.branches)
+      if (empty) return actions.notice(empty)
       // Submit checks out a branch of the stack first. When the selected
       // branch does not exist locally, use the top branch of the stack.
       const target = branch.exists ? branch.name : topExistingBranch(stack)
       if (target) actions.submit(target)
     } else if (key === 'p') {
       if (branch.isMerged) return actions.notice(`${branch.name} is merged`)
+      const end = stack.branches.indexOf(branch)
+      const empty = emptyBranch(stack.branches.slice(0, end + 1))
+      if (empty) return actions.notice(empty)
       const target = branch.exists ? branch.name : topExistingBranch(stack)
       if (target) actions.submitUpTo(stack, target, branch.name)
     }
@@ -301,7 +332,7 @@ export function App({ warning }: { warning: string | null }) {
         context={['after', modal.top]}
         label="name"
         value={input}
-        onChange={setInput}
+        onChange={changeBranchName}
         onSubmit={submitInput}
         onCancel={closeModal}
       />
@@ -313,7 +344,7 @@ export function App({ warning }: { warning: string | null }) {
         context={['base', modal.base]}
         label="first branch"
         value={input}
-        onChange={setInput}
+        onChange={changeBranchName}
         onSubmit={submitInput}
         onCancel={closeModal}
       />
@@ -325,7 +356,7 @@ export function App({ warning }: { warning: string | null }) {
         context={['from', modal.base]}
         label="name"
         value={input}
-        onChange={setInput}
+        onChange={changeBranchName}
         onSubmit={submitInput}
         onCancel={closeModal}
       />
@@ -337,7 +368,7 @@ export function App({ warning }: { warning: string | null }) {
         context={['after', modal.branch]}
         label="name"
         value={input}
-        onChange={setInput}
+        onChange={changeBranchName}
         onSubmit={submitInput}
         onCancel={closeModal}
       />
@@ -380,7 +411,7 @@ export function App({ warning }: { warning: string | null }) {
             syncing={syncing}
             maxHeight={listMaxHeight}
             width={
-              !wide ? undefined : termCols >= VERY_WIDE_MIN_COLS ? '25%' : '50%'
+              !wide ? undefined : termCols >= VERY_WIDE_MIN_COLS ? '35%' : '50%'
             }
           />
 
@@ -399,7 +430,7 @@ export function App({ warning }: { warning: string | null }) {
 
       <StatusBar busy={busy} status={status} variant={statusVariant} />
 
-      <Legend kind={selectedRow?.kind} rebaseInProgress={rebaseInProgress} />
+      <Legend kind={selectedRow?.kind} rebase={rebase} />
     </Box>
   )
 }

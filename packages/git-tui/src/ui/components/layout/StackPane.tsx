@@ -16,8 +16,15 @@ type Props = {
   width?: string
 }
 
+// The lines around the rows: the top and bottom border, and the title.
+const FRAME_LINES = 3
+
 // The stack list. It gets the height of its branches up to maxHeight. Then it
 // clips and scrolls, and StackList shows "↑/↓ N more".
+// The height comes from the number of rows, not from what StackList draws.
+// StackList draws fewer rows when it scrolls, and it gets its row count from
+// the measured height. A height from the drawn content would then shrink at
+// each render, and the renders would not stop.
 export function StackPane({
   rows,
   selected,
@@ -27,6 +34,11 @@ export function StackPane({
   width,
 }: Props) {
   const [listRef, listRows] = useMeasuredHeight()
+  // An empty list shows one line of text.
+  const height =
+    maxHeight === undefined
+      ? undefined
+      : Math.min(maxHeight, Math.max(rows.length, 1) + FRAME_LINES)
 
   return (
     <Box
@@ -36,7 +48,7 @@ export function StackPane({
       paddingX={1}
       flexShrink={0}
       width={width}
-      maxHeight={maxHeight}
+      height={height}
       overflow="hidden"
     >
       <Box justifyContent="space-between">

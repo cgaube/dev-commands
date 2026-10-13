@@ -6,6 +6,8 @@ type Props = {
   log: BranchLog
   maxLines: number
   needsRebase: boolean
+  // A plain branch is not in a stack, so the stack keys do not apply to it.
+  plain: boolean
 }
 
 function splitOneline(line: string): { sha: string; subject: string } {
@@ -15,16 +17,48 @@ function splitOneline(line: string): { sha: string; subject: string } {
     : { sha: line.slice(0, space), subject: line.slice(space + 1) }
 }
 
+// A dim line that names the parent, e.g. "── on main ─────". It fills the
+// width: the box after the label has only a top border.
+function ParentDivider({ parent }: { parent: string }) {
+  return (
+    <Box>
+      <Text dimColor>── on {parent} </Text>
+      <Box
+        flexGrow={1}
+        borderStyle="single"
+        borderTop
+        borderBottom={false}
+        borderLeft={false}
+        borderRight={false}
+        borderDimColor
+      />
+    </Box>
+  )
+}
+
 // The Log tab: `git log --oneline` of the selected branch from its base, with
-// the short sha in yellow like git. The base commit follows, dimmed, for
-// context. The shared frame of the right panel contains it.
-export function LogPane({ log, maxLines, needsRebase }: Props) {
+// the short sha in yellow like git. A divider that names the parent follows,
+// then the base commit, dimmed, for context. The shared frame of the right
+// panel contains it.
+export function LogPane({ log, maxLines, needsRebase, plain }: Props) {
   const allLines = log.commits ? log.commits.split('\n') : []
   const movedHint = needsRebase
-  const reserved = (log.base ? 1 : 0) + (movedHint ? 2 : 0)
-  const limit = Math.max(1, maxLines - reserved)
-  const lines = allLines.slice(0, limit)
-  const clipped = allLines.length > limit
+  const reserved = (log.base ? 2 : 0) + (movedHint ? 2 : 0)
+  const room = Math.max(1, maxLines - reserved)
+  // A branch shows all its own commits, so the count is exact. A trunk
+  // shows only its latest commits.
+  const isTrunk = !log.parent
+  // The "more" line takes a line too.
+  const needsMore = allLines.length > room || (isTrunk && !!log.hasOlder)
+  const lines = allLines.slice(0, Math.max(1, needsMore ? room - 1 : room))
+  const hidden = allLines.length - lines.length
+  const more = isTrunk
+    ? hidden > 0 || log.hasOlder
+      ? '… older commits'
+      : ''
+    : hidden > 0
+      ? `… ${hidden} more ${hidden === 1 ? 'commit' : 'commits'}`
+      : ''
 
   if (log.error) {
     return (
@@ -49,22 +83,29 @@ export function LogPane({ log, maxLines, needsRebase }: Props) {
           </Text>
         )
       })}
-      {clipped && <Text dimColor>… more</Text>}
+      {more && <Text dimColor>{more}</Text>}
       {log.base && (
-        <Text dimColor wrap="truncate-end">
-          {(() => {
-            const { sha, subject } = splitOneline(log.base)
-            return `${sha} ${subject}  (${log.parent})`
-          })()}
-        </Text>
+        <>
+          <ParentDivider parent={log.parent} />
+          <Text dimColor wrap="truncate-end">
+            {log.base}
+          </Text>
+        </>
       )}
       {movedHint && (
         <>
           <Text> </Text>
-          <Text color="yellow">
-            ! parent has new commits — <Kbd>r</Kbd> rebase · <Kbd>S</Kbd> rebase
-            + push
-          </Text>
+          {plain ? (
+            <Text color="yellow">
+              ! {log.parent} has new commits — <Kbd>r</Kbd> rebase, then{' '}
+              <Kbd>p</Kbd> push
+            </Text>
+          ) : (
+            <Text color="yellow">
+              ! {log.parent} has new commits — <Kbd>r</Kbd> rebase ·{' '}
+              <Kbd>S</Kbd> rebase + push
+            </Text>
+          )}
         </>
       )}
     </Box>

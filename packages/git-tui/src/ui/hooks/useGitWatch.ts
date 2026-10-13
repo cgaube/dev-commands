@@ -1,12 +1,13 @@
 import { watch, type WatchOptions } from 'fs'
 import { useEffect, useRef } from 'react'
 import { REBASE_STATE_FILE, STACK_FILE } from '#src/stack/ghStack'
+import { GIT_REBASE_DIRS } from '#src/utils/git'
 
 // Watch the git directories themselves, not the single files. gh-stack can
 // replace its file, and a watch on a replaced file stops. Only these names
 // cause a reload, so that index writes do not.
 // The git directory of this worktree has HEAD and the gh-stack files.
-const OWN_FILES = ['HEAD', STACK_FILE, REBASE_STATE_FILE]
+const OWN_FILES = ['HEAD', STACK_FILE, REBASE_STATE_FILE, ...GIT_REBASE_DIRS]
 // The shared directory has the branches. In a linked worktree, it is not
 // the git directory.
 const SHARED_FILES = ['packed-refs']

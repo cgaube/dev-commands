@@ -6,8 +6,13 @@ import {
   PushFailedError,
   readStacks,
 } from '#src/stack/ghStack'
-import { conflictedFiles, currentBranch } from '#src/utils/git'
-import { stackLabel, type LocalStack } from '#src/stack/model'
+import {
+  commitCount,
+  conflictedFiles,
+  currentBranch,
+  isAncestor,
+} from '#src/utils/git'
+import { stackLabel, type LocalStack, type RebaseKind } from '#src/stack/model'
 import { topExistingBranch } from '../rows'
 
 type Run = (label: string, fn: () => Promise<string>) => Promise<void>
@@ -40,6 +45,62 @@ async function exec(file: string, args: string[]) {
   }
 }
 
+// A rebase that stopped on a conflict. It stays in progress on purpose.
+class RebaseConflictError extends Error {}
+
+// Run git rebase without a terminal: git cannot open an editor, so keep the
+// commit messages. On a conflict, git stops in the middle of the rebase.
+// Then name the files: the legend tells what to do. On another error, abort,
+// so that the branch is as before.
+async function gitRebase(args: string[]) {
+  try {
+    await execa('git', ['rebase', ...args], { env: { GIT_EDITOR: 'true' } })
+  } catch (error: any) {
+    const files = await conflictedFiles()
+    if (files.length) {
+      const shown = files.slice(0, 3).join(', ')
+      const more = files.length > 3 ? ` +${files.length - 3}` : ''
+      throw new RebaseConflictError(`conflict in ${shown}${more}`, {
+        cause: error,
+      })
+    }
+    if (args[0] !== '--continue') {
+      await execa('git', ['rebase', '--abort']).catch(() => {})
+    }
+    throw commandError(error)
+  }
+}
+
+// Stop before any checkout when git does not accept the name of a new
+// branch. gh stack does not always report it.
+async function checkBranchName(name: string) {
+  try {
+    await execa('git', ['check-ref-format', '--branch', name])
+  } catch {
+    throw new Error(`"${name}" is not a valid branch name`)
+  }
+}
+
+// Fast-forward the trunk to origin, e.g. after a PR merged on GitHub. Never
+// force: when the trunk has local commits that origin does not have, leave
+// it. git branch -f refuses a branch that a worktree has checked out, so the
+// current branch fast-forwards with a merge. Returns a short result.
+async function updateTrunk(trunk: string): Promise<string> {
+  await exec('git', ['fetch', 'origin', trunk])
+  const remote = `origin/${trunk}`
+  const behind = await commitCount(trunk, remote)
+  if (!behind) return `${trunk} up to date`
+  if (!(await isAncestor(trunk, remote))) {
+    return `${trunk} has local commits — not updated`
+  }
+  if ((await currentBranch()) === trunk) {
+    await exec('git', ['merge', '--ff-only', remote])
+  } else {
+    await exec('git', ['branch', '-f', trunk, remote])
+  }
+  return `${trunk} updated (+${behind})`
+}
+
 function plural(count: number): string {
   return `${count} ${count === 1 ? 'stack' : 'stacks'}`
 }
@@ -61,7 +122,9 @@ async function ghStackOrHint(
       if (!files.length) throw error
       const shown = files.slice(0, 3).join(', ')
       const more = files.length > 3 ? ` +${files.length - 3}` : ''
-      throw new Error(`conflict in ${shown}${more}`, { cause: error })
+      throw new RebaseConflictError(`conflict in ${shown}${more}`, {
+        cause: error,
+      })
     }
     // gh stack sync restores the branches on a conflict. r stops at it.
     if (error instanceof Error && /conflict/i.test(error.message)) {
@@ -84,12 +147,33 @@ async function ghStackOrHint(
   }
 }
 
+// Remove a stack from local tracking when none of its branches exists. gh
+// stack unstack acts on the stack of the current branch, and without a
+// terminal it does not select between the stacks of a trunk. So make one of
+// its branches again for a moment, at the trunk, and unstack from it.
+async function removeOrphanStack(stack: LocalStack) {
+  const name = stack.branches[0].name
+  await execa('git', ['switch', '-c', name, stack.trunk])
+  try {
+    await ghStackOrHint(['unstack', '--local'])
+  } finally {
+    await ensureOn(stack.trunk)
+    await execa('git', ['branch', '-D', name])
+  }
+}
+
 // Sync one stack after a merge on GitHub. Sync fetches, rebases the open
 // branches onto the trunk, pushes them, and deletes the local branches of
 // merged PRs. When all the PRs of the stack are merged, remove the stack from
 // local tracking. The stack stays on GitHub.
+// A stack that is not on GitHub and has no local branches has nothing to
+// keep, e.g. after git deleted its branches as merged. Remove it.
 async function syncStack(stack: LocalStack): Promise<'synced' | 'removed'> {
   const branch = topExistingBranch(stack)
+  if (!branch && !stack.number) {
+    await removeOrphanStack(stack)
+    return 'removed'
+  }
   if (branch) {
     await ensureOn(branch)
     await ghStackOrHint(['sync', '--prune'])
@@ -109,8 +193,11 @@ async function syncStack(stack: LocalStack): Promise<'synced' | 'removed'> {
 export function useStackActions(run: Run) {
   return useMemo(() => {
     // Sync the stacks one after the other. Stop at the first failure.
-    const sync = (stacks: LocalStack[]) =>
-      run(`syncing ${plural(stacks.length)}…`, async () => {
+    // On a trunk row, also update the trunk first, so that sync is useful
+    // without stacks, e.g. after a plain branch merged on GitHub.
+    const sync = (stacks: LocalStack[], trunk?: string) =>
+      run(`syncing ${trunk ?? plural(stacks.length)}…`, async () => {
+        const trunkResult = trunk ? await updateTrunk(trunk) : ''
         const original = await currentBranch()
         let synced = 0
         let removed = 0
@@ -128,8 +215,9 @@ export function useStackActions(run: Run) {
         // --prune can delete the original branch. Then stay where sync went.
         await ensureOn(original).catch(() => {})
         const parts = [
+          trunkResult,
           synced ? `synced ${plural(synced)}` : '',
-          removed ? `removed ${plural(removed)} (all merged)` : '',
+          removed ? `removed ${plural(removed)} (merged or gone)` : '',
         ]
         return parts.filter(Boolean).join(', ') || 'nothing to sync'
       })
@@ -165,11 +253,17 @@ export function useStackActions(run: Run) {
 
       // Continue a rebase that stopped on a conflict. Without a terminal, git
       // cannot open an editor for the commit message, so keep the message.
-      // gh stack stops again at the next conflict, if there is one.
-      continueRebase: () =>
+      // gh stack, or git, stops again at the next conflict, if there is one.
+      continueRebase: (kind: RebaseKind) =>
         run('continuing rebase…', async () => {
-          await ghStackOrHint(['rebase', '--continue'], { GIT_EDITOR: 'true' })
-          return 'rebased — press P to push'
+          if (kind === 'stack') {
+            await ghStackOrHint(['rebase', '--continue'], {
+              GIT_EDITOR: 'true',
+            })
+            return 'rebased — press P to push'
+          }
+          await gitRebase(['--continue'])
+          return 'rebased — press p to push'
         }),
 
       checkout: (name: string) =>
@@ -190,6 +284,7 @@ export function useStackActions(run: Run) {
 
       add: (top: string, name: string) =>
         run(`adding ${name}…`, async () => {
+          await checkBranchName(name)
           await ensureOn(top)
           return (await ghStackOrHint(['add', name])) || `added ${name}`
         }),
@@ -199,6 +294,7 @@ export function useStackActions(run: Run) {
       // branch of a stack, so check out the base.
       init: (name: string, base: string) =>
         run(`creating stack ${name}…`, async () => {
+          await checkBranchName(name)
           await ensureOn(base)
           const args = ['init', '--base', base, name]
           return (await ghStackOrHint(args)) || `created stack ${name}`
@@ -209,6 +305,7 @@ export function useStackActions(run: Run) {
       // changes that are not committed.
       createBranch: (name: string, base: string) =>
         run(`creating ${name}…`, async () => {
+          await checkBranchName(name)
           await exec('git', ['switch', '-c', name, base])
           return `on ${name}`
         }),
@@ -310,12 +407,34 @@ export function useStackActions(run: Run) {
           return `deleted ${name} and origin/${name}`
         }),
 
+      // Rebase a plain branch onto the default branch, without a push. Go
+      // back to the original branch, as a stack rebase does. On a conflict,
+      // stay on the branch, in the middle of the rebase, as a stack rebase
+      // does: the legend tells what to do, and r continues.
+      rebasePlain: (name: string, base: string) =>
+        run(`rebasing ${name}…`, async () => {
+          const original = await currentBranch()
+          await ensureOn(name)
+          try {
+            await gitRebase([base])
+          } catch (error) {
+            // Stay on the branch at a conflict. Otherwise nothing changed.
+            if (!(error instanceof RebaseConflictError)) {
+              await ensureOn(original).catch(() => {})
+            }
+            throw error
+          }
+          await ensureOn(original)
+          return `rebased ${name} onto ${base} — press p to push`
+        }),
+
       // Make a stack from a plain branch. gh stack init adopts the existing
       // branch as the bottom of the stack, and makes the new branch on top.
       // gh stack init fails when the current branch is in a stack, also when
       // the arguments name other branches. So check out the branch first.
       promote: (name: string, newName: string, base: string) =>
         run(`creating stack from ${name}…`, async () => {
+          await checkBranchName(newName)
           await ensureOn(name)
           const args = ['init', '--base', base, name, newName]
           return (await ghStackOrHint(args)) || `created stack ${name}`

@@ -26,8 +26,8 @@ const GROUPS: Group[] = [
       ['↵/c', 'checkout', 'switch to selected branch'],
       ['tab', 'next pane', 'cycle right panel forward'],
       ['S-tab', 'prev pane', 'cycle right panel backward'],
-      ['i', 'info pane', 'show branch details'],
-      ['l', 'log pane', 'show commit history'],
+      ['i', 'info pane', 'show branch details (short terminal only)'],
+      ['l', 'log pane', 'show commit history (short terminal only)'],
     ],
   },
   {
@@ -35,7 +35,7 @@ const GROUPS: Group[] = [
     shortcuts: [
       ['n', 'new branch', 'git switch -c (another trunk: new stack)'],
       ['r', 'rebase all', 'gh stack rebase on each stack, no push'],
-      ['S', 'sync all', 'sync each stack of the trunk'],
+      ['S', 'sync all', 'fast-forward the trunk, then sync its stacks'],
     ],
   },
   {
@@ -53,6 +53,7 @@ const GROUPS: Group[] = [
     title: 'On a normal branch (parent is the default branch)',
     shortcuts: [
       ['p/P', 'push + PR', 'push, then gh pr create --draft --fill'],
+      ['r', 'rebase', 'git rebase <default>, no push; aborts on conflict'],
       ['o', 'open PR', 'open PR in browser'],
       ['n', 'make stack', 'gh stack init <branch> <name>: adopt it'],
       ['d', 'delete', 'git branch -d, optionally origin too'],

@@ -3,6 +3,7 @@ import {
   currentBranch,
   defaultBranch,
   gitDirs,
+  isGitRebaseInProgress,
   isAncestor,
   isWorkingTreeDirty,
   refShas,
@@ -41,6 +42,8 @@ export type LocalStack = {
   isActive: boolean
 }
 
+export type RebaseKind = 'stack' | 'git'
+
 export type StackState = {
   gitDir: string
   // The git directory that all worktrees share. See gitDirs.
@@ -50,7 +53,10 @@ export type StackState = {
   stacks: LocalStack[]
   // The local branches that are not in a stack and are not a trunk.
   branches: Branch[]
-  rebaseInProgress: boolean
+  // The rebase that stopped on a conflict: a gh stack rebase of a stack, a
+  // plain git rebase of a plain branch, or none. gh stack rebase also uses
+  // git rebase, so its state comes first.
+  rebase: RebaseKind | null
 }
 
 async function buildStack(
@@ -162,7 +168,7 @@ async function buildPlainBranches(
 
 export async function loadStackState(): Promise<StackState> {
   const { gitDir: dir, commonDir } = await gitDirs()
-  const [stacks, current, dirty, local, rawRemote, rebaseInProgress] =
+  const [stacks, current, dirty, local, rawRemote, stackRebase] =
     await Promise.all([
       readStacks(dir),
       currentBranch(),
@@ -189,7 +195,7 @@ export async function loadStackState(): Promise<StackState> {
     defaultBranch: trunk,
     stacks: built,
     branches,
-    rebaseInProgress,
+    rebase: stackRebase ? 'stack' : isGitRebaseInProgress(dir) ? 'git' : null,
   }
 }
 

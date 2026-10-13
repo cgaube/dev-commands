@@ -66,6 +66,10 @@ the sync. Sync does these steps:
 When all the PRs of a stack are merged, `S` also removes the stack from local
 tracking (`gh stack unstack --local`). The stack stays on GitHub.
 
+`S` also removes a stack that is not on GitHub and has no local branches. This
+can occur when a tool deletes merged branches: a branch without commits looks
+merged into `main`.
+
 **Open PRs for part of a stack:** `p` on a branch opens PRs from the first
 branch of the stack up to that branch. The branches after it get no PR. For
 example, with `main → a → b → c`, press `p` on `b` to open PRs for `a` and `b`
@@ -137,7 +141,12 @@ command runs, the TUI checks out the selected branch.
 | --- | ---------------------------------------------------------- |
 | `n` | start a normal branch from this trunk (`git switch -c`)    |
 | `r` | rebase all the stacks, one after the other, without a push |
-| `S` | sync all the stacks, one after the other                   |
+| `S` | update the trunk, then sync all the stacks                 |
+
+`S` on a trunk first fetches it and fast-forwards it to `origin`, also when
+there are no stacks, e.g. after you merge the PR of a normal branch on GitHub.
+It does not force: when the trunk has local commits that `origin` does not have,
+it shows `main has local commits — not updated`.
 
 **Keys on a stack branch** (they act on the stack of the branch):
 
@@ -155,6 +164,7 @@ command runs, the TUI checks out the selected branch.
 | Key       | Action                                                          |
 | --------- | --------------------------------------------------------------- |
 | `p` / `P` | push, and open a draft PR into the default branch               |
+| `r`       | rebase onto the default branch, without a push                  |
 | `o`       | open the PR of the branch in the browser                        |
 | `n`       | make a stack: this branch is first, a new branch comes after it |
 | `d`       | delete the branch                                               |
@@ -174,7 +184,22 @@ git refuses because the branch is not merged, the TUI asks again before
 `git branch -D`. A squash-merged PR also shows as not merged, because git cannot
 see the squash. You cannot delete the current branch.
 
-`r` and `S` do not apply to a normal branch.
+`r` runs `git rebase <default>` and goes back to the branch you were on. It does
+not push: check the result, then press `p`. `r` does nothing when the branch
+already contains the default branch.
+
+When the rebase has a conflict, it stops there, as a stack rebase does. The
+legend tells what to do: edit the files, `git add` them, then press `r` again.
+`r` continues the rebase (`git rebase --continue`) and keeps the commit
+messages. To stop the rebase and restore the branch, run `git rebase --abort` in
+a terminal. The TUI also finds a rebase that you started in a terminal.
+
+Rebase from `main` (`r` or `S` on the trunk) acts on stacks only. It does not
+rebase normal branches: they can have open PRs, and a rebase needs a force-push.
+Rebase each one with `r` when you want to. The `⚠` badge shows the branches that
+need it.
+
+`S` does not apply to a normal branch.
 
 **New work always starts as a normal branch.** `n` on the default branch, or `N`
 anywhere, makes a normal branch from the default branch
@@ -195,6 +220,9 @@ stack (`gh stack init --base <trunk>`).
 | `R`               | reload the branches and the PR status  |
 | `?`               | show the help                          |
 | `q` / `esc`       | quit                                   |
+
+The right panel shows Info, then Log below it, when the terminal is tall enough.
+On a short terminal, they are tabs: `tab`, `i` and `l` change the tab.
 
 The tree keeps a merged branch after `S` deletes it locally, as GitHub does. It
 shows dimmed, with the `merged` badge. You cannot check it out, but `o` opens

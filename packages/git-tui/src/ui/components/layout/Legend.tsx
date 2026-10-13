@@ -1,5 +1,6 @@
 import { Box, Text } from 'ink'
 import type { RowKind } from '../../rows'
+import type { RebaseKind } from '#src/stack/model'
 import { Kbd } from '../Kbd'
 
 type Hint = [key: string, action: string]
@@ -26,6 +27,7 @@ const BY_KIND: Record<RowKind, Hint[]> = {
   ],
   plain: [
     ['p', 'push + PR'],
+    ['r', 'rebase'],
     ['o', 'open PR'],
     ['n', 'make stack'],
     ['d', 'delete'],
@@ -39,17 +41,23 @@ const TAIL: Hint[] = [
   ['q', 'quit'],
 ]
 
-type Props = { kind?: RowKind; rebaseInProgress: boolean }
+type Props = { kind?: RowKind; rebase: RebaseKind | null }
 
-export function Legend({ kind, rebaseInProgress }: Props) {
+// How to stop each kind of rebase. The TUI does not abort it for you.
+const ABORT: Record<RebaseKind, string> = {
+  stack: 'gh stack rebase --abort',
+  git: 'git rebase --abort',
+}
+
+export function Legend({ kind, rebase }: Props) {
   const hints = [...(kind ? [...ALWAYS, ...BY_KIND[kind]] : EMPTY), ...TAIL]
 
-  if (rebaseInProgress) {
+  if (rebase) {
     return (
       <Box justifyContent="center" paddingX={1} marginBottom={1} flexShrink={0}>
         <Text color="yellow">
           rebase in progress — fix the files, git add them, then press r (to
-          stop: gh stack rebase --abort)
+          stop: {ABORT[rebase]})
         </Text>
       </Box>
     )

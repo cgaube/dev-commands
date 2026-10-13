@@ -1,3 +1,4 @@
+import { existsSync } from 'fs'
 import { execa } from 'execa'
 
 // Apply to every read-only git command. GIT_OPTIONAL_LOCKS=0 stops them
@@ -115,4 +116,12 @@ export async function defaultBranch(
   } catch {
     return local.has('master') && !local.has('main') ? 'master' : 'main'
   }
+}
+
+// True while a plain git rebase stopped, e.g. on a conflict. Git keeps its
+// state in one of these directories of the worktree's git directory.
+export const GIT_REBASE_DIRS = ['rebase-merge', 'rebase-apply']
+
+export function isGitRebaseInProgress(dir: string): boolean {
+  return GIT_REBASE_DIRS.some((name) => existsSync(`${dir}/${name}`))
 }

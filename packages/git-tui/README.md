@@ -238,20 +238,38 @@ it stops. Run `gh stack sync` in a terminal to select what to do.
 
 **Badges:**
 
-| Badge       | Meaning                                   |
-| ----------- | ----------------------------------------- |
-| `●`         | the current branch                        |
-| `⌂`         | the trunk                                 |
-| `○`         | a branch that is not checked out          |
-| `≡`         | the first branch of a stack               |
-| `+N`        | commits after the parent                  |
-| `⚠`         | the parent has moved, use `r` or `S`      |
-| `merged`    | the PR is merged                          |
-| `⇡⇣`        | the local and remote branch are different |
-| `*`         | changes that are not committed            |
-| `[gone]`    | the branch does not exist locally         |
-| `●` (color) | CI status: green, red or yellow           |
-| `✓` / `✗`   | PR approved / changes requested           |
+| Badge         | Meaning                                  |
+| ------------- | ---------------------------------------- |
+| `●`           | the current branch                       |
+| `⌂`           | the trunk                                |
+| `○`           | a branch that is not checked out         |
+| `≡`           | the first branch of a stack              |
+| ` N`         | commits after the parent                 |
+| `⚠`           | the parent has moved, use `r` or `S`     |
+| ` merged`    | the PR is merged                         |
+| `⇡N`          | N commits to push                        |
+| `⇣N`          | N commits to pull                        |
+| `local`       | the branch is not on origin yet          |
+| `*`           | changes that are not committed           |
+| `[gone]`      | the branch does not exist locally        |
+| ` passing`   | CI checks passed (`running`, `failing`)  |
+| `3d` (right)  | the time since the last commit           |
+| ` review`    | the PR waits for a review                |
+| ` approved`  | the PR is approved, but cannot merge yet |
+| ` ready`     | the PR is ready to merge                 |
+| ` rework`    | a reviewer requested changes             |
+| ` behind`    | the base moved, update the PR branch     |
+| ` conflicts` | the PR has merge conflicts               |
+| ` draft`     | the PR is a draft                        |
+| ` closed`    | the PR is closed and not merged          |
+
+The PR icons are Nerd Font octicons, plus one codicon for conflicts. Use a
+[Nerd Font](https://www.nerdfonts.com/) 3.5 or later in your terminal, or they
+show as boxes.
+
+To see all the badges in your terminal and font, run `bun run icons` in
+`packages/git-tui`. It draws a mock branch list and info pane with the real
+components, then the current icons and other icons that you can use instead.
 
 The TUI reloads when branches, `HEAD` or `.git/gh-stack` change.
 

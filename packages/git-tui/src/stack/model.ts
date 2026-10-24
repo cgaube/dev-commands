@@ -6,6 +6,8 @@ import {
   isGitRebaseInProgress,
   isAncestor,
   isWorkingTreeDirty,
+  leftRightCount,
+  refDates,
   refShas,
 } from '#src/utils/git'
 import { isRebaseInProgress, readStacks, type GhStack } from './ghStack'
@@ -26,11 +28,15 @@ export type Branch = {
   isMerged: boolean
   // True when the parent has commits that this branch does not contain.
   needsRebase: boolean
-  // True when the local sha is different from the sha on origin.
-  diverged: boolean
+  // The commits that origin does not have yet, and the commits on origin
+  // that the local branch does not have. 0 when there is no remote branch.
+  unpushed: number
+  unpulled: number
   // True when origin has a branch with the same name.
   hasRemote: boolean
   prNumber: number | null
+  // The time of the last commit, in seconds since the epoch.
+  committedAt: number | null
 }
 
 export type LocalStack = {
@@ -59,12 +65,24 @@ export type StackState = {
   rebase: RebaseKind | null
 }
 
+// Count the commits to push and to pull. Only ask git when the local and
+// remote shas are different.
+async function pushState(
+  name: string,
+  sha: string | undefined,
+  remoteSha: string | undefined,
+): Promise<[number, number]> {
+  if (!sha || !remoteSha || sha === remoteSha) return [0, 0]
+  return leftRightCount(name, `origin/${name}`)
+}
+
 async function buildStack(
   stack: GhStack,
   current: string,
   dirty: boolean,
   local: Map<string, string>,
   remote: Map<string, string>,
+  dates: Map<string, number>,
 ): Promise<LocalStack> {
   const trunk = stack.trunk.branch
   const branches = await Promise.all(
@@ -88,11 +106,12 @@ async function buildStack(
         i > 0 && !!stack.branches[i - 1].pullRequest?.merged
       const base = directParentMerged ? null : (ref.base ?? null)
       const countBase = parentSha ? parent : base
-      const [ahead, containsParent] = await Promise.all([
+      const remoteSha = remote.get(name)
+      const [ahead, containsParent, [unpushed, unpulled]] = await Promise.all([
         exists && countBase ? commitCount(countBase, name) : 0,
         exists && parentSha && !isMerged ? isAncestor(parent, name) : true,
+        pushState(name, sha, remoteSha),
       ])
-      const remoteSha = remote.get(name)
       return {
         name,
         parent,
@@ -103,9 +122,11 @@ async function buildStack(
         isDirty: name === current && dirty,
         isMerged,
         needsRebase: !containsParent,
-        diverged: !!sha && !!remoteSha && sha !== remoteSha,
+        unpushed,
+        unpulled,
         hasRemote: !!remoteSha,
         prNumber: ref.pullRequest?.number ?? null,
+        committedAt: dates.get(name) ?? null,
       }
     }),
   )
@@ -127,6 +148,7 @@ async function buildPlainBranches(
   dirty: boolean,
   local: Map<string, string>,
   remote: Map<string, string>,
+  dates: Map<string, number>,
 ): Promise<Branch[]> {
   const used = new Set([trunk])
   for (const stack of stacks) {
@@ -143,11 +165,12 @@ async function buildPlainBranches(
     .toSorted((a, b) => a.localeCompare(b))
   return Promise.all(
     names.map(async (name): Promise<Branch> => {
-      const [ahead, containsParent] = await Promise.all([
+      const remoteSha = remote.get(name)
+      const [ahead, containsParent, [unpushed, unpulled]] = await Promise.all([
         parentRef ? commitCount(parentRef, name) : 0,
         parentRef ? isAncestor(parentRef, name) : true,
+        pushState(name, local.get(name), remoteSha),
       ])
-      const remoteSha = remote.get(name)
       return {
         name,
         parent: trunk,
@@ -158,9 +181,11 @@ async function buildPlainBranches(
         isDirty: name === current && dirty,
         isMerged: false,
         needsRebase: !containsParent,
-        diverged: !!remoteSha && local.get(name) !== remoteSha,
+        unpushed,
+        unpulled,
         hasRemote: !!remoteSha,
         prNumber: null,
+        committedAt: dates.get(name) ?? null,
       }
     }),
   )
@@ -168,7 +193,7 @@ async function buildPlainBranches(
 
 export async function loadStackState(): Promise<StackState> {
   const { gitDir: dir, commonDir } = await gitDirs()
-  const [stacks, current, dirty, local, rawRemote, stackRebase] =
+  const [stacks, current, dirty, local, rawRemote, stackRebase, dates] =
     await Promise.all([
       readStacks(dir),
       currentBranch(),
@@ -176,6 +201,7 @@ export async function loadStackState(): Promise<StackState> {
       refShas('refs/heads'),
       refShas('refs/remotes/origin'),
       isRebaseInProgress(dir),
+      refDates('refs/heads'),
     ])
   const remote = new Map<string, string>()
   for (const [ref, sha] of rawRemote) {
@@ -184,9 +210,9 @@ export async function loadStackState(): Promise<StackState> {
   const trunk = await defaultBranch(local)
   const [built, branches] = await Promise.all([
     Promise.all(
-      stacks.map((s) => buildStack(s, current, dirty, local, remote)),
+      stacks.map((s) => buildStack(s, current, dirty, local, remote, dates)),
     ),
-    buildPlainBranches(stacks, trunk, current, dirty, local, remote),
+    buildPlainBranches(stacks, trunk, current, dirty, local, remote, dates),
   ])
   return {
     gitDir: dir,

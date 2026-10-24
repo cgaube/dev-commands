@@ -5,11 +5,12 @@ import {
   AheadBadge,
   NeedsRebaseBadge,
   MergedBadge,
-  DivergedBadge,
+  PushBadge,
+  AgeBadge,
   DirtyBadge,
   GoneBadge,
   ChecksBadge,
-  ReviewBadge,
+  PrStatusBadge,
 } from '../badges'
 import { useMeasuredHeight } from '../../hooks/useMeasuredHeight'
 
@@ -83,17 +84,41 @@ const BADGE_ENTRIES: { node: ReactNode; desc: string }[] = [
   { node: <AheadBadge count={3} />, desc: 'commits ahead of parent' },
   { node: <NeedsRebaseBadge />, desc: 'parent has moved, r or S' },
   { node: <MergedBadge />, desc: 'PR is merged' },
-  { node: <DivergedBadge />, desc: 'local and remote differ' },
+  {
+    node: <PushBadge unpushed={2} unpulled={0} hasRemote />,
+    desc: 'commits to push',
+  },
+  {
+    node: <PushBadge unpushed={0} unpulled={1} hasRemote />,
+    desc: 'commits to pull',
+  },
+  {
+    node: <PushBadge unpushed={0} unpulled={0} hasRemote={false} />,
+    desc: 'not pushed to origin',
+  },
+  {
+    node: <AgeBadge committedAt={Date.now() / 1000 - 3 * 24 * 3600} />,
+    desc: 'time since the last commit',
+  },
   { node: <DirtyBadge />, desc: 'uncommitted changes' },
   { node: <GoneBadge />, desc: 'branch ref no longer exists' },
-  { node: <ChecksBadge status="success" />, desc: 'CI checks passing' },
-  { node: <ChecksBadge status="failure" />, desc: 'CI checks failing' },
+  { node: <ChecksBadge status="success" />, desc: 'CI checks passed' },
+  { node: <ChecksBadge status="failure" />, desc: 'a CI check failed' },
   { node: <ChecksBadge status="pending" />, desc: 'CI checks running' },
-  { node: <ReviewBadge decision="APPROVED" />, desc: 'PR approved' },
+  { node: <PrStatusBadge status="review" />, desc: 'PR waits for review' },
   {
-    node: <ReviewBadge decision="CHANGES_REQUESTED" />,
-    desc: 'changes requested',
+    node: <PrStatusBadge status="approved" />,
+    desc: 'PR approved, not mergeable yet',
   },
+  { node: <PrStatusBadge status="ready" />, desc: 'PR ready to merge' },
+  { node: <PrStatusBadge status="rework" />, desc: 'changes requested' },
+  { node: <PrStatusBadge status="behind" />, desc: 'base moved, update PR' },
+  {
+    node: <PrStatusBadge status="conflicts" />,
+    desc: 'PR has merge conflicts',
+  },
+  { node: <PrStatusBadge status="draft" />, desc: 'PR is a draft' },
+  { node: <PrStatusBadge status="closed" />, desc: 'PR closed, not merged' },
 ]
 
 type Line =

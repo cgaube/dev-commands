@@ -1,7 +1,8 @@
 import { Box, Text } from 'ink'
 import { stackLabel } from '#src/stack/model'
 import type { Row as StackRow } from '../rows'
-import type { PrInfo } from '#src/stack/pr'
+import { prStatus, type PrInfo } from '#src/stack/pr'
+import { formatAge, PrStatusLabel, PR_STATUS_STYLES } from './badges'
 
 // 'loading' while the PR lookup is in flight, null when there's no PR (or no gh),
 // undefined when PR info doesn't apply (e.g. trunk).
@@ -18,42 +19,44 @@ function Row({ label, value }: { label: string; value: string }) {
   )
 }
 
-function prColor(state: string, isDraft: boolean): string | undefined {
-  if (isDraft) return 'gray'
-  switch (state) {
-    case 'OPEN':
-      return 'green'
-    case 'MERGED':
-      return 'magenta'
-    case 'CLOSED':
-      return 'red'
-    default:
-      return undefined
-  }
-}
-
 function checksColor(status: string): string {
   if (status === 'success') return 'green'
   if (status === 'failure') return 'red'
   return 'yellow'
 }
 
-function checksLabel(status: string): string {
-  if (status === 'success') return '● passing'
-  if (status === 'failure') return '● failing'
-  return '● pending'
+// The result, then the checks that are not done or failed, then the count,
+// e.g. "failing lint, e2e (3/5 passed)".
+function checksLabel(pr: PrInfo): string {
+  const { total, passed, failing, pending } = pr.checks
+  const count = `(${passed}/${total} passed)`
+  if (pr.checksStatus === 'failure') {
+    return `failing ${failing.join(', ')} ${count}`
+  }
+  if (pr.checksStatus === 'pending') {
+    return `pending ${pending.join(', ')} ${count}`
+  }
+  return `passing ${count}`
 }
 
-function reviewColor(decision: string): string {
-  if (decision === 'APPROVED') return 'green'
-  if (decision === 'CHANGES_REQUESTED') return 'red'
-  return 'yellow'
+// The time since the last commit, e.g. "3d ago".
+function updatedLabel(committedAt: number): string {
+  const age = formatAge(Math.max(0, Date.now() / 1000 - committedAt))
+  return age === 'now' ? 'just now' : `${age} ago`
 }
 
-function reviewLabel(decision: string): string {
-  if (decision === 'APPROVED') return '✓ approved'
-  if (decision === 'CHANGES_REQUESTED') return '✗ changes requested'
-  return '◌ review required'
+// Uses the icons and colors of the PR status labels.
+function reviewLabel(decision: string): { text: string; color: string } {
+  if (decision === 'APPROVED') {
+    const { icon, color } = PR_STATUS_STYLES.approved
+    return { text: `${icon} approved`, color }
+  }
+  if (decision === 'CHANGES_REQUESTED') {
+    const { icon, color } = PR_STATUS_STYLES.rework
+    return { text: `${icon} changes requested`, color }
+  }
+  const { icon, color } = PR_STATUS_STYLES.review
+  return { text: `${icon} review required`, color }
 }
 
 function PrRow({ pr }: { pr: PrState }) {
@@ -69,10 +72,8 @@ function PrRow({ pr }: { pr: PrState }) {
         <Text dimColor>none</Text>
       ) : (
         <Text wrap="truncate-end">
-          <Text color={prColor(pr.state, pr.isDraft)}>
-            #{pr.number} {pr.isDraft ? 'DRAFT' : pr.state}
-          </Text>{' '}
-          {pr.title} <Text dimColor>(o to open)</Text>
+          #{pr.number} <PrStatusLabel status={prStatus(pr)} /> {pr.title}{' '}
+          <Text dimColor>(o to open)</Text>
         </Text>
       )}
     </Box>
@@ -86,8 +87,8 @@ function CiRow({ pr }: { pr: PrState }) {
       <Box width={8}>
         <Text dimColor>ci</Text>
       </Box>
-      <Text color={checksColor(pr.checksStatus)}>
-        {checksLabel(pr.checksStatus)}
+      <Text color={checksColor(pr.checksStatus)} wrap="truncate-end">
+        {checksLabel(pr)}
       </Text>
     </Box>
   )
@@ -95,14 +96,13 @@ function CiRow({ pr }: { pr: PrState }) {
 
 function ReviewRow({ pr }: { pr: PrState }) {
   if (!pr || pr === 'loading' || !pr.reviewDecision) return null
+  const review = reviewLabel(pr.reviewDecision)
   return (
     <Box>
       <Box width={8}>
         <Text dimColor>review</Text>
       </Box>
-      <Text color={reviewColor(pr.reviewDecision)}>
-        {reviewLabel(pr.reviewDecision)}
-      </Text>
+      <Text color={review.color}>{review.text}</Text>
     </Box>
   )
 }
@@ -120,6 +120,11 @@ export function InfoPane({ row, pr }: { row?: StackRow; pr: PrState }) {
       branch?.isDirty ? 'dirty' : '',
       branch?.isMerged ? 'merged' : '',
       branch?.needsRebase ? 'needs rebase' : '',
+      branch?.unpushed ? `${branch.unpushed} to push` : '',
+      branch?.unpulled ? `${branch.unpulled} to pull` : '',
+      branch?.exists && !branch.isMerged && !branch.hasRemote
+        ? 'not pushed'
+        : '',
       branch && !branch.exists && !branch.isMerged ? 'gone' : '',
     ]
       .filter(Boolean)
@@ -141,6 +146,9 @@ export function InfoPane({ row, pr }: { row?: StackRow; pr: PrState }) {
       {branch && <Row label="parent" value={branch.parent} />}
       {branch && <Row label="ahead" value={String(branch.ahead)} />}
       <Row label="status" value={status} />
+      {branch?.committedAt != null && (
+        <Row label="updated" value={updatedLabel(branch.committedAt)} />
+      )}
       <PrRow pr={pr} />
       <CiRow pr={pr} />
       <ReviewRow pr={pr} />

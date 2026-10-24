@@ -84,6 +84,39 @@ export async function commitCount(
   }
 }
 
+// Count the commits that only a has and the commits that only b has.
+export async function leftRightCount(
+  a: string,
+  b: string,
+): Promise<[number, number]> {
+  try {
+    const out = (
+      await gitOutput(['rev-list', '--left-right', '--count', `${a}...${b}`])
+    ).trim()
+    const [left, right] = out.split(/\s+/).map(Number)
+    return [left || 0, right || 0]
+  } catch {
+    return [0, 0]
+  }
+}
+
+// Map each ref under the pattern to the time of its last commit, in seconds
+// since the epoch, keyed by the short ref name.
+export async function refDates(pattern: string): Promise<Map<string, number>> {
+  const out = await gitOutput([
+    'for-each-ref',
+    '--format=%(refname:short) %(committerdate:unix)',
+    pattern,
+  ])
+  const dates = new Map<string, number>()
+  for (const line of out.split('\n')) {
+    const sep = line.lastIndexOf(' ')
+    if (sep === -1) continue
+    dates.set(line.slice(0, sep), Number(line.slice(sep + 1)))
+  }
+  return dates
+}
+
 // Map each ref under the pattern to its sha, keyed by the short ref name.
 export async function refShas(pattern: string): Promise<Map<string, string>> {
   const out = await gitOutput([

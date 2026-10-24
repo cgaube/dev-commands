@@ -1,15 +1,16 @@
 import { Box, Text } from 'ink'
-import type { PrInfo } from '#src/stack/pr'
+import { prStatus, type PrInfo } from '#src/stack/pr'
 import type { Row } from '../rows'
 import {
   AheadBadge,
   NeedsRebaseBadge,
   MergedBadge,
-  DivergedBadge,
+  PushBadge,
+  AgeBadge,
   DirtyBadge,
   GoneBadge,
   ChecksBadge,
-  ReviewBadge,
+  PrStatusBadge,
 } from './badges'
 
 // Shows on the first branch of a stack.
@@ -70,18 +71,35 @@ export function BranchRow({ row, isSelected, pr }: Props) {
             <Text dimColor> stack #{stack.number}</Text>
           )}
           {branch.ahead > 0 && <AheadBadge count={branch.ahead} />}
-          {branch.isMerged && <MergedBadge />}
+          {/* The PR chip already says merged. */}
+          {branch.isMerged && pr?.state !== 'MERGED' && <MergedBadge />}
           {branch.needsRebase && <NeedsRebaseBadge />}
-          {branch.diverged && <DivergedBadge />}
+          {branch.exists && !branch.isMerged && (
+            <PushBadge
+              unpushed={branch.unpushed}
+              unpulled={branch.unpulled}
+              hasRemote={branch.hasRemote}
+            />
+          )}
           {branch.isDirty && <DirtyBadge />}
           {!branch.exists && !branch.isMerged && <GoneBadge />}
           {pr && (
             <>
               <ChecksBadge status={pr.checksStatus} />
-              <ReviewBadge decision={pr.reviewDecision} />
+              <PrStatusBadge status={prStatus(pr)} dim={dim} />
             </>
           )}
         </Box>
+      )}
+
+      {/* The age goes to the right edge, so the ages line up. */}
+      {branch?.committedAt != null && (
+        <>
+          <Box flexGrow={1} />
+          <Box flexShrink={0} marginRight={1}>
+            <AgeBadge committedAt={branch.committedAt} />
+          </Box>
+        </>
       )}
     </Box>
   )

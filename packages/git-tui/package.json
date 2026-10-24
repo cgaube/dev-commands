@@ -6,7 +6,8 @@
     "git-tui": "bun run src/main.ts",
     "compile": "bun run ts:check && bun build src/main.ts --compress --compile --outfile bin/git-tui",
     "compile:watch": "bun run compile --watch",
-    "ts:check": "tsc --noEmit"
+    "ts:check": "tsc --noEmit",
+    "icons": "bun scripts/icon-preview.tsx"
   },
   "dependencies": {
     "@clack/prompts": "^1.6.0",

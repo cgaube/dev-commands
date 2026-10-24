@@ -1,5 +1,6 @@
-import { Text } from 'ink'
+import { PrStatusBadge } from './PrStatusBadge'
 
+// For a stack branch whose PR gh did not list. Looks like the PR chip.
 export function MergedBadge() {
-  return <Text color="magenta"> merged</Text>
+  return <PrStatusBadge status="merged" />
 }

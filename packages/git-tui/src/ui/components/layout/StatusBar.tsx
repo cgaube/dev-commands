@@ -1,5 +1,6 @@
 import { Box } from 'ink'
-import { Spinner, StatusMessage } from '@inkjs/ui'
+import { Spinner } from '../Spinner'
+import { StatusMessage } from '../StatusMessage'
 import type { StatusVariant } from '../../hooks/useStackData'
 
 type Props = {

@@ -81,7 +81,9 @@ export function BranchRow({ row, isSelected, pr }: Props) {
               hasRemote={branch.hasRemote}
             />
           )}
-          {branch.isDirty && <DirtyBadge />}
+          {branch.changedFiles > 0 && (
+            <DirtyBadge count={branch.changedFiles} />
+          )}
           {!branch.exists && !branch.isMerged && <GoneBadge />}
           {pr && (
             <>

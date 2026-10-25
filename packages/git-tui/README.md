@@ -238,30 +238,30 @@ it stops. Run `gh stack sync` in a terminal to select what to do.
 
 **Badges:**
 
-| Badge         | Meaning                                  |
-| ------------- | ---------------------------------------- |
-| `●`           | the current branch                       |
-| `⌂`           | the trunk                                |
-| `○`           | a branch that is not checked out         |
-| `≡`           | the first branch of a stack              |
-| ` N`         | commits after the parent                 |
-| `⚠`           | the parent has moved, use `r` or `S`     |
-| ` merged`    | the PR is merged                         |
-| `⇡N`          | N commits to push                        |
-| `⇣N`          | N commits to pull                        |
-| `local`       | the branch is not on origin yet          |
-| `*`           | changes that are not committed           |
-| `[gone]`      | the branch does not exist locally        |
-| ` passing`   | CI checks passed (`running`, `failing`)  |
-| `3d` (right)  | the time since the last commit           |
-| ` review`    | the PR waits for a review                |
-| ` approved`  | the PR is approved, but cannot merge yet |
-| ` ready`     | the PR is ready to merge                 |
-| ` rework`    | a reviewer requested changes             |
-| ` behind`    | the base moved, update the PR branch     |
-| ` conflicts` | the PR has merge conflicts               |
-| ` draft`     | the PR is a draft                        |
-| ` closed`    | the PR is closed and not merged          |
+| Badge         | Meaning                                     |
+| ------------- | ------------------------------------------- |
+| `●`           | the current branch                          |
+| `⌂`           | the trunk                                   |
+| `○`           | a branch that is not checked out            |
+| `≡`           | the first branch of a stack                 |
+| ` N`         | commits after the parent                    |
+| `⚠`           | the parent has moved, use `r` or `S`        |
+| ` merged`    | the PR is merged                            |
+| `⇡N`          | N commits to push                           |
+| `⇣N`          | N commits to pull                           |
+| `local`       | the branch is not on origin yet             |
+| ` N`         | N files with changes that are not committed |
+| `[gone]`      | the branch does not exist locally           |
+| ` passing`   | CI checks passed (`running`, `failing`)     |
+| `3d` (right)  | the time since the last commit              |
+| ` review`    | the PR waits for a review                   |
+| ` approved`  | the PR is approved, but cannot merge yet    |
+| ` ready`     | the PR is ready to merge                    |
+| ` rework`    | a reviewer requested changes                |
+| ` behind`    | the base moved, update the PR branch        |
+| ` conflicts` | the PR has merge conflicts                  |
+| ` draft`     | the PR is a draft                           |
+| ` closed`    | the PR is closed and not merged             |
 
 The PR icons are Nerd Font octicons, plus one codicon for conflicts. Use a
 [Nerd Font](https://www.nerdfonts.com/) 3.5 or later in your terminal, or they
@@ -285,6 +285,38 @@ Print the tree of local branches without the TUI.
 `gh stack` keeps a separate stack file for each worktree. A stack that you made
 in one worktree is not a stack in the others: there, its branches show as normal
 branches. Use one worktree for the work on a stack.
+
+## Development
+
+### Inspect the TUI with React DevTools
+
+The TUI is a React app that renders with
+[Ink](https://github.com/vadimdemedes/ink). You can inspect its component tree,
+props, state, and hooks in
+[React DevTools](https://react.dev/learn/react-developer-tools):
+
+1. Start the standalone DevTools. Use the same major version as
+   `react-devtools-core` in `package.json`:
+
+   ```bash
+   bunx react-devtools@8
+   ```
+
+2. In `packages/git-tui`, start the TUI with `DEV=true`:
+
+   ```bash
+   DEV=true bun run git-tui
+   ```
+
+The TUI connects to the DevTools window when it starts. When DevTools is not
+open, Ink shows a warning and the TUI runs as usual.
+
+**Why `react-devtools-core` is a dev dependency:** Ink loads it only when
+`DEV=true`. But `bun build --compile` follows all imports, also this one. When
+the package is not installed, `bun run compile` stops with
+`Could not resolve: "react-devtools-core"`. Do not remove it. Do not mark it as
+external with `--external` either: then the binary stops at startup with
+`Cannot find package 'react-devtools-core'`, also without `DEV=true`.
 
 ## Limits
 

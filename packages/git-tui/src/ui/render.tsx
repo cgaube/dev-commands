@@ -4,17 +4,14 @@ import { App } from './components/App'
 import { queryClient } from './query/client'
 
 // Show the stack TUI in the alternate screen buffer, so that it does not
-// change the scrollback of the user.
+// change the scrollback of the user. Incremental rendering writes only the
+// changed part of each line, so the spinners do not redraw the whole frame.
 export async function renderStackApp(warning: string | null): Promise<void> {
-  process.stdout.write('\x1b[?1049h\x1b[H')
   const instance = render(
     <QueryClientProvider client={queryClient}>
       <App warning={warning} />
     </QueryClientProvider>,
+    { alternateScreen: true, incrementalRendering: true },
   )
-  try {
-    await instance.waitUntilExit()
-  } finally {
-    process.stdout.write('\x1b[?1049l')
-  }
+  await instance.waitUntilExit()
 }

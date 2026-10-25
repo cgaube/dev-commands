@@ -211,7 +211,7 @@ function branch(name: string, parent: string, fields: Partial<Branch>): Branch {
     ahead: 1,
     exists: true,
     isCurrent: false,
-    isDirty: false,
+    changedFiles: 0,
     isMerged: false,
     needsRebase: false,
     unpushed: 0,
@@ -267,7 +267,7 @@ const state: StackState = {
       branch('auth/ui', 'auth/api', {
         ahead: 2,
         isCurrent: true,
-        isDirty: true,
+        changedFiles: 3,
         unpushed: 2,
         committedAt: now - 20 * 60,
       }),

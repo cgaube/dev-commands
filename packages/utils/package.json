@@ -9,10 +9,10 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.8.1",
-    "@types/luxon": "^3.7.5",
+    "@types/luxon": "^3.7.6",
     "colorize-template": "^1.0.0",
     "commander": "^15.0.0",
-    "execa": "^10.0.1",
+    "execa": "^10.2.1",
     "luxon": "^3.7.2",
     "picocolors": "^1.1.1"
   }

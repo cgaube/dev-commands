@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { Box, useApp, useInput } from 'ink'
+import { Box, useApp, useInput, useWindowSize } from 'ink'
 import { useQuery } from '@tanstack/react-query'
 import { logQueryOptions, prsQueryOptions } from '../query/queries'
 import type { PrInfo } from '#src/stack/pr'
@@ -13,8 +13,7 @@ import { StackPane } from './layout/StackPane'
 import { ContentArea } from './layout/ContentArea'
 import { StatusBar } from './layout/StatusBar'
 import { Legend } from './layout/Legend'
-import { HelpOverlay, HELP_LINE_COUNT } from './layout/HelpOverlay'
-import { useTerminalSize } from '../hooks/useTerminalSize'
+import { HelpOverlay } from './layout/HelpOverlay'
 import { useStackData } from '../hooks/useStackData'
 import { useStackActions } from '../hooks/useStackActions'
 
@@ -74,7 +73,7 @@ function Centered({ children }: { children: ReactNode }) {
 
 export function App({ warning }: { warning: string | null }) {
   const { exit } = useApp()
-  const { cols: termCols, rows: termRows } = useTerminalSize()
+  const { columns: termCols, rows: termRows } = useWindowSize()
 
   const {
     state,
@@ -93,7 +92,6 @@ export function App({ warning }: { warning: string | null }) {
   const [right, setRight] = useState<TabMode>('info')
   const [modal, setModal] = useState<Modal>(null)
   const [showHelp, setShowHelp] = useState(false)
-  const [helpScroll, setHelpScroll] = useState(0)
   const [input, setInput] = useState('')
 
   const logQuery = useQuery(logQueryOptions(selectedRow))
@@ -177,15 +175,9 @@ export function App({ warning }: { warning: string | null }) {
   useInput((key, info) => {
     if (info.ctrl && key === 'c') return exit()
     if (modal) return
+    // HelpOverlay scrolls itself.
     if (showHelp) {
-      if (key === '?' || info.escape || key === 'q') {
-        setShowHelp(false)
-        setHelpScroll(0)
-      } else if (info.upArrow || key === 'k') {
-        setHelpScroll((s) => Math.max(0, s - 1))
-      } else if (info.downArrow || key === 'j') {
-        setHelpScroll((s) => Math.min(HELP_LINE_COUNT - 1, s + 1))
-      }
+      if (key === '?' || info.escape || key === 'q') setShowHelp(false)
       return
     }
 
@@ -401,7 +393,7 @@ export function App({ warning }: { warning: string | null }) {
       />
 
       {showHelp ? (
-        <HelpOverlay scroll={helpScroll} />
+        <HelpOverlay />
       ) : (
         <Box flexGrow={1} flexDirection={wide ? 'row' : 'column'} minHeight={0}>
           <StackPane

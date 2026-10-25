@@ -1,11 +1,12 @@
 import {
+  branchMoveDates,
+  changedFileCount,
   commitCount,
   currentBranch,
   defaultBranch,
   gitDirs,
   isGitRebaseInProgress,
   isAncestor,
-  isWorkingTreeDirty,
   leftRightCount,
   refDates,
   refShas,
@@ -24,7 +25,9 @@ export type Branch = {
   ahead: number
   exists: boolean
   isCurrent: boolean
-  isDirty: boolean
+  // The files with changes that are not committed. Only the current branch
+  // has them, so it is 0 for the other branches.
+  changedFiles: number
   isMerged: boolean
   // True when the parent has commits that this branch does not contain.
   needsRebase: boolean
@@ -35,7 +38,9 @@ export type Branch = {
   // True when origin has a branch with the same name.
   hasRemote: boolean
   prNumber: number | null
-  // The time of the last commit, in seconds since the epoch.
+  // The time of the last commit of the branch, in seconds since the epoch.
+  // Without commits of its own, the time the branch was last moved, e.g.
+  // created. See branchTime.
   committedAt: number | null
 }
 
@@ -65,6 +70,25 @@ export type StackState = {
   rebase: RebaseKind | null
 }
 
+type BranchDates = {
+  // The committer date of each branch tip.
+  committed: Map<string, number>
+  // The time git last moved each branch. See branchMoveDates.
+  moved: Map<string, number>
+}
+
+// A branch without commits of its own points at a commit of its parent, so
+// its commit date is the parent's: a new branch would look as old as its
+// parent. Use the time git last moved the branch instead.
+function branchTime(
+  dates: BranchDates,
+  name: string,
+  ahead: number,
+): number | null {
+  if (ahead > 0) return dates.committed.get(name) ?? null
+  return dates.moved.get(name) ?? dates.committed.get(name) ?? null
+}
+
 // Count the commits to push and to pull. Only ask git when the local and
 // remote shas are different.
 async function pushState(
@@ -79,10 +103,10 @@ async function pushState(
 async function buildStack(
   stack: GhStack,
   current: string,
-  dirty: boolean,
+  changedFiles: number,
   local: Map<string, string>,
   remote: Map<string, string>,
-  dates: Map<string, number>,
+  dates: BranchDates,
 ): Promise<LocalStack> {
   const trunk = stack.trunk.branch
   const branches = await Promise.all(
@@ -119,14 +143,14 @@ async function buildStack(
         ahead,
         exists,
         isCurrent: name === current,
-        isDirty: name === current && dirty,
+        changedFiles: name === current ? changedFiles : 0,
         isMerged,
         needsRebase: !containsParent,
         unpushed,
         unpulled,
         hasRemote: !!remoteSha,
         prNumber: ref.pullRequest?.number ?? null,
-        committedAt: dates.get(name) ?? null,
+        committedAt: branchTime(dates, name, ahead),
       }
     }),
   )
@@ -145,10 +169,10 @@ async function buildPlainBranches(
   stacks: GhStack[],
   trunk: string,
   current: string,
-  dirty: boolean,
+  changedFiles: number,
   local: Map<string, string>,
   remote: Map<string, string>,
-  dates: Map<string, number>,
+  dates: BranchDates,
 ): Promise<Branch[]> {
   const used = new Set([trunk])
   for (const stack of stacks) {
@@ -178,14 +202,14 @@ async function buildPlainBranches(
         ahead,
         exists: true,
         isCurrent: name === current,
-        isDirty: name === current && dirty,
+        changedFiles: name === current ? changedFiles : 0,
         isMerged: false,
         needsRebase: !containsParent,
         unpushed,
         unpulled,
         hasRemote: !!remoteSha,
         prNumber: null,
-        committedAt: dates.get(name) ?? null,
+        committedAt: branchTime(dates, name, ahead),
       }
     }),
   )
@@ -193,26 +217,47 @@ async function buildPlainBranches(
 
 export async function loadStackState(): Promise<StackState> {
   const { gitDir: dir, commonDir } = await gitDirs()
-  const [stacks, current, dirty, local, rawRemote, stackRebase, dates] =
-    await Promise.all([
-      readStacks(dir),
-      currentBranch(),
-      isWorkingTreeDirty(),
-      refShas('refs/heads'),
-      refShas('refs/remotes/origin'),
-      isRebaseInProgress(dir),
-      refDates('refs/heads'),
-    ])
+  const [
+    stacks,
+    current,
+    changedFiles,
+    local,
+    rawRemote,
+    stackRebase,
+    committed,
+  ] = await Promise.all([
+    readStacks(dir),
+    currentBranch(),
+    changedFileCount(),
+    refShas('refs/heads'),
+    refShas('refs/remotes/origin'),
+    isRebaseInProgress(dir),
+    refDates('refs/heads'),
+  ])
   const remote = new Map<string, string>()
   for (const [ref, sha] of rawRemote) {
     remote.set(ref.replace(/^origin\//, ''), sha)
   }
-  const trunk = await defaultBranch(local)
+  const [trunk, moved] = await Promise.all([
+    defaultBranch(local),
+    branchMoveDates(commonDir, [...local.keys()]),
+  ])
+  const dates = { committed, moved }
   const [built, branches] = await Promise.all([
     Promise.all(
-      stacks.map((s) => buildStack(s, current, dirty, local, remote, dates)),
+      stacks.map((s) =>
+        buildStack(s, current, changedFiles, local, remote, dates),
+      ),
     ),
-    buildPlainBranches(stacks, trunk, current, dirty, local, remote, dates),
+    buildPlainBranches(
+      stacks,
+      trunk,
+      current,
+      changedFiles,
+      local,
+      remote,
+      dates,
+    ),
   ])
   return {
     gitDir: dir,

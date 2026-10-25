@@ -11,8 +11,8 @@
     "@clack/prompts": "^1.8.1",
     "colorize-template": "^1.0.0",
     "commander": "^15.0.0",
-    "execa": "^10.0.1",
-    "nypm": "^0.6.10",
+    "execa": "^10.2.1",
+    "nypm": "^0.6.11",
     "picocolors": "^1.1.1"
   }
 }

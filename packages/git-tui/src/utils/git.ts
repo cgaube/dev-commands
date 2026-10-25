@@ -1,4 +1,6 @@
 import { existsSync } from 'fs'
+import { stat } from 'fs/promises'
+import { join } from 'path'
 import { execa } from 'execa'
 
 // Apply to every read-only git command. GIT_OPTIONAL_LOCKS=0 stops them
@@ -65,9 +67,11 @@ export async function conflictedFiles(): Promise<string[]> {
   return out.split('\n').filter(Boolean)
 }
 
-export async function isWorkingTreeDirty(): Promise<boolean> {
+// The number of files with changes that are not committed, untracked files
+// included.
+export async function changedFileCount(): Promise<number> {
   const out = await gitOutput(['status', '--porcelain'])
-  return out.split(/\r?\n/).some((l) => l.trim().length > 0)
+  return out.split(/\r?\n/).filter((l) => l.trim().length > 0).length
 }
 
 export async function commitCount(
@@ -114,6 +118,27 @@ export async function refDates(pattern: string): Promise<Map<string, number>> {
     if (sep === -1) continue
     dates.set(line.slice(0, sep), Number(line.slice(sep + 1)))
   }
+  return dates
+}
+
+// Map each local branch to the time git last moved it (created, committed,
+// reset or rebased), in seconds since the epoch. It is the mtime of the
+// branch's reflog. A branch without a reflog is not in the map.
+export async function branchMoveDates(
+  commonDir: string,
+  names: string[],
+): Promise<Map<string, number>> {
+  const dates = new Map<string, number>()
+  await Promise.all(
+    names.map(async (name) => {
+      try {
+        const { mtimeMs } = await stat(join(commonDir, 'logs/refs/heads', name))
+        dates.set(name, Math.floor(mtimeMs / 1000))
+      } catch {
+        // No reflog: core.logAllRefUpdates is off, or it expired.
+      }
+    }),
+  )
   return dates
 }
 

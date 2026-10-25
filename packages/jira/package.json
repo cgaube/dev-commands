@@ -13,8 +13,8 @@
     "@types/voca": "^1.4.6",
     "colorize-template": "^1.0.0",
     "commander": "^15.0.0",
-    "execa": "^10.0.1",
-    "jira.js": "^5.4.0",
+    "execa": "^10.2.1",
+    "jira.js": "^6.3.0",
     "picocolors": "^1.1.1",
     "voca": "^1.4.1"
   }

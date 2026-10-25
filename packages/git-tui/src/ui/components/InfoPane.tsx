@@ -117,7 +117,9 @@ export function InfoPane({ row, pr }: { row?: StackRow; pr: PrState }) {
     [
       row.kind === 'trunk' ? 'trunk' : '',
       row.isCurrent ? 'current' : '',
-      branch?.isDirty ? 'dirty' : '',
+      branch?.changedFiles
+        ? `${branch.changedFiles} uncommitted ${branch.changedFiles === 1 ? 'file' : 'files'}`
+        : '',
       branch?.isMerged ? 'merged' : '',
       branch?.needsRebase ? 'needs rebase' : '',
       branch?.unpushed ? `${branch.unpushed} to push` : '',

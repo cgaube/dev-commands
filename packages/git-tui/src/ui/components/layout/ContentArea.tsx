@@ -1,5 +1,5 @@
 import { Box, Text } from 'ink'
-import { Spinner } from '@inkjs/ui'
+import { Spinner } from '../Spinner'
 import type { Row } from '../../rows'
 import type { PrInfo } from '#src/stack/pr'
 import type { BranchLog } from '#src/stack/log'

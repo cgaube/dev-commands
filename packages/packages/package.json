@@ -11,7 +11,7 @@
     "@clack/prompts": "^1.8.1",
     "colorize-template": "^1.0.0",
     "commander": "^15.0.0",
-    "execa": "^10.0.1",
-    "handlebars": "^4.7.9"
+    "execa": "^10.2.1",
+    "handlebars": "^4.7.10"
   }
 }

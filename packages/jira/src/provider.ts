@@ -1,4 +1,4 @@
-import { Version3Client } from 'jira.js'
+import { createCloudClient } from 'jira.js'
 import { getConfig } from '#src/config'
 import type { IssueFilters, NormalizedIssue } from '#src/types'
 
@@ -39,9 +39,12 @@ async function buildClient() {
 
   const cleanHost = host.replace(/^https?:\/\//, '').replace(/\/$/, '')
 
-  const client = new Version3Client({
+  const client = createCloudClient({
     host: `https://${cleanHost}`,
-    authentication: { basic: { email, apiToken } },
+    auth: { type: 'basic', email, apiToken },
+    // Jira responses can differ from the schema (locale, project type). The
+    // default prints a warning to stderr, which would break the CLI output.
+    onSchemaMismatch: 'silent',
   })
 
   return { client, host: cleanHost }
@@ -54,12 +57,10 @@ export async function getAssignedIssues(
 
   const jql = buildJql(filters)
 
-  const result = await client.issueSearch.searchForIssuesUsingJqlEnhancedSearch(
-    {
-      jql,
-      fields: ['summary', 'status', 'project', 'labels'],
-    },
-  )
+  const result = await client.issueSearch.searchIssues({
+    jql,
+    fields: ['summary', 'status', 'project', 'labels'],
+  })
 
   const issues = result.issues ?? []
 

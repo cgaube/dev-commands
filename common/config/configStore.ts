@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs'
-import { secrets, file } from 'bun'
+import { file } from 'bun'
+import { secrets } from './secrets'
 import { join, dirname } from 'path'
 import { homedir } from 'os'
 import { ConfigSchema } from './types'

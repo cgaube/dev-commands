@@ -1,36 +1,32 @@
 import { devCliProgram } from '#common/devCliProgram'
 import { autoComplete } from '#common/exosqueleton/autoComplete'
 import { summary as summaryCommand } from '#common/exosqueleton/summary'
-import { colorize, exitWithError, introTitle } from '#common/style'
-import { commands } from '#src/commands'
-import { checkGhStack, GhStackError } from '#src/stack/ghStack'
-import { renderStackApp } from '#src/ui/render'
-import { currentBranch } from '#src/utils/git'
-import { outro } from '@clack/prompts'
+import { exitWithError } from '#common/style'
+import { injectConfigCommands } from '#src/config'
+import { startTui } from '#src/ui/render'
 
-const gitTui = devCliProgram({
+const program = devCliProgram({
   name: 'git-tui',
-  summary: 'browse branches and manage stacked PRs',
+  summary: 'view branches, stacks, PRs and CI status',
 })
 
-// Without a subcommand, open the TUI. The default action of devCliProgram
-// shows the help, so replace it, but keep --summary and --complete.
-gitTui.action(async (optionalArgs, options) => {
-  if (options.summary) return summaryCommand(gitTui)
-  if (options.complete) return autoComplete(gitTui, optionalArgs)
-
-  introTitle('Git TUI')
-  try {
-    await renderStackApp(await checkGhStack())
-  } catch (error) {
-    if (error instanceof GhStackError) exitWithError(error.message)
-    throw error
+// Stop early with a clear message when a required tool is missing.
+function checkTools() {
+  if (!Bun.which('git')) exitWithError('git is not installed')
+  if (!Bun.which('gh')) {
+    exitWithError('gh is not installed. See https://cli.github.com')
   }
-  outro(colorize`On {cyan ${await currentBranch()}}`)
-})
-
-for (const createCommand of commands) {
-  gitTui.addCommand(createCommand())
 }
 
-gitTui.parse()
+// Without a subcommand, open the TUI. Keep --summary and --complete.
+program.action(async (optionalArgs, options) => {
+  if (options.summary) return summaryCommand(program)
+  if (options.complete) return autoComplete(program, optionalArgs)
+  checkTools()
+  await startTui()
+  process.exit(0)
+})
+
+injectConfigCommands(program)
+
+program.parse()

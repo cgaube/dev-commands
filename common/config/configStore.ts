@@ -165,12 +165,21 @@ export class ConfigStore {
   // Traverse all directories up to home folder to find config paths
   private getConfigPaths() {
     const paths = []
+    const home = homedir()
     let currentPath = this.configDir
 
-    while (currentPath !== dirname(homedir())) {
+    while (currentPath !== dirname(home)) {
       paths.push(currentPath)
-      currentPath = dirname(currentPath)
+      const parent = dirname(currentPath)
+      // A directory outside the home directory never gets to the parent of
+      // home. Stop at the root, else the loop does not end.
+      if (parent === currentPath) break
+      currentPath = parent
     }
+
+    // Outside the home directory, also use the home configuration. It is
+    // last, so it has the lowest priority.
+    if (!paths.includes(home)) paths.push(home)
 
     return paths
   }

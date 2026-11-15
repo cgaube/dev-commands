@@ -41,9 +41,16 @@ Description (from line 3, Markdown)
 
 Output only the title and the description. No preamble, no code fences around the whole response.`
 
+// A PR or a commit message: the first line, then the rest.
 export type PrText = { title: string; body: string }
 
-// The provider from the `prAgent` setting, when its command is installed.
+// The text as one string, as the editor and git commit take it.
+export function joinText({ title, body }: PrText): string {
+  return body ? `${title}\n\n${body}\n` : `${title}\n`
+}
+
+// The provider from the `prAgent` setting (it also writes the commit
+// messages), when its command is installed.
 export async function prProvider(): Promise<AIProvider | null> {
   const name = await getConfig('prAgent')
   const provider = AI_PROVIDERS[name]
@@ -66,10 +73,7 @@ async function prInput(repo: Repo, row: Row): Promise<string> {
     git(['diff', range]),
     readTemplate(),
   ])
-  const cut =
-    diff.length > MAX_DIFF_CHARS
-      ? `${diff.slice(0, MAX_DIFF_CHARS)}\n\n[diff truncated]`
-      : diff
+  const cut = cutDiff(diff)
   return [
     `Branch: ${row.name}`,
     `Base: ${base}`,
@@ -86,8 +90,16 @@ async function prInput(repo: Repo, row: Row): Promise<string> {
   ].join('\n')
 }
 
-// Split the answer: the first line is the title, the rest is the body.
-function parse(answer: string): PrText {
+// Cut a long diff, so that the prompt stays small.
+export function cutDiff(diff: string): string {
+  return diff.length > MAX_DIFF_CHARS
+    ? `${diff.slice(0, MAX_DIFF_CHARS)}\n\n[diff truncated]`
+    : diff
+}
+
+// Split an answer of the AI, or a text from the editor: the first line is
+// the title, the rest is the body.
+export function splitText(answer: string): PrText {
   const text = answer
     .trim()
     .replace(/^```(?:markdown|md)?\n([\s\S]*)\n```$/, '$1')
@@ -98,7 +110,7 @@ function parse(answer: string): PrText {
     .replace(/^title:\s*/i, '')
     .replace(/^["'`]|["'`]$/g, '')
     .trim()
-  if (!title) throw new Error('the AI gave an empty answer')
+  if (!title) throw new Error('the text is empty')
   return { title, body: rest.join('\n').trim() }
 }
 
@@ -108,5 +120,5 @@ export async function generatePrText(
   row: Row,
 ): Promise<PrText> {
   const input = await prInput(repo, row)
-  return parse(await provider.run(PROMPT, input))
+  return splitText(await provider.run(PROMPT, input))
 }

@@ -29,13 +29,13 @@ function wrap(text: string, width: number): string[] {
 }
 
 // The lines of the description, and how many show at a time.
-export function prLayout(body: string, width: number, height: number) {
+export function draftLayout(body: string, width: number, height: number) {
   // The borders and the padding of the modal use 6 cells.
-  const lines = wrap(
-    body || '(no description)',
-    modalWidth(width, MAX_WIDTH) - 6,
+  const lines = wrap(body, modalWidth(width, MAX_WIDTH) - 6)
+  const rows = Math.max(
+    body ? 3 : 0,
+    Math.min(lines.length, height - CHROME_ROWS - 2),
   )
-  const rows = Math.max(3, Math.min(lines.length, height - CHROME_ROWS - 2))
   return { lines, rows, maxOffset: Math.max(0, lines.length - rows) }
 }
 
@@ -55,23 +55,26 @@ function BodyLine({ line }: { line: string }) {
   )
 }
 
-// Write a PR with AI, show it, then push and open it as a draft or ready for
-// review.
-export function PrModal({
-  branch,
-  base,
-  provider,
+// A text that the AI writes (a PR or a commit message): the modal shows it,
+// and the user reads it before it is used.
+export function DraftModal({
+  title,
+  subtitle,
+  writing,
   text,
   error,
   offset,
   frame,
   width,
   height,
+  hints,
   onPress,
 }: {
-  branch: string
-  base: string
-  provider: string
+  title: string
+  // One dim line under the title, for example "feat → main".
+  subtitle: string
+  // What the AI does, while it writes.
+  writing: string
   // While both are missing, the AI is writing.
   text?: PrText
   error?: string
@@ -80,24 +83,21 @@ export function PrModal({
   frame: number
   width: number
   height: number
+  hints: HintItem[]
   onPress: (key: string) => void
 }) {
   const loading = !text && !error
-  const { lines, rows, maxOffset } = prLayout(text?.body ?? '', width, height)
+  const { lines, rows, maxOffset } = draftLayout(
+    text?.body ?? '',
+    width,
+    height,
+  )
   const at = Math.min(offset, maxOffset)
-  const hints: HintItem[] = loading
-    ? [{ key: 'escape', label: 'cancel' }]
-    : [
-        { key: 'return', label: text ? 'draft PR' : 'draft PR from commits' },
-        { key: 'o', label: text ? 'ready for review' : 'ready, from commits' },
-        { key: 'g', label: text ? 'write again' : 'try again' },
-        { key: 'escape', label: 'cancel' },
-      ]
   const shownRows = text ? rows : 1
   return (
     <Modal
       severity={error ? 'warning' : 'info'}
-      title="Push and open a PR"
+      title={title}
       width={width}
       height={height}
       maxWidth={MAX_WIDTH}
@@ -106,22 +106,19 @@ export function PrModal({
       onPress={onPress}
     >
       <text fg={color.dim} wrapMode="none" truncate>
-        {branch} → {base}
+        {subtitle}
         {text && maxOffset > 0
           ? ` · lines ${at + 1}–${at + rows} of ${lines.length} (↑↓)`
           : ''}
       </text>
       {loading && (
         <text marginTop={1}>
-          <Activity
-            text={`${provider} is writing the title and the description`}
-            frame={frame}
-          />
+          <Activity text={writing} frame={frame} />
         </text>
       )}
       {error && (
         <text fg={color.yellow} marginTop={1} wrapMode="word">
-          {provider} failed: {error}
+          {error}
         </text>
       )}
       {text && (
@@ -129,20 +126,23 @@ export function PrModal({
           <text fg={color.text} marginTop={1} wrapMode="word">
             <strong>{text.title}</strong>
           </text>
-          <box
-            marginTop={1}
-            height={rows}
-            flexDirection="column"
-            flexShrink={0}
-            onMouseScroll={(event) => {
-              const direction = event.scroll?.direction
-              if (direction === 'up' || direction === 'down') onPress(direction)
-            }}
-          >
-            {lines.slice(at, at + rows).map((line, i) => (
-              <BodyLine key={at + i} line={line} />
-            ))}
-          </box>
+          {text.body && (
+            <box
+              marginTop={1}
+              height={rows}
+              flexDirection="column"
+              flexShrink={0}
+              onMouseScroll={(event) => {
+                const direction = event.scroll?.direction
+                if (direction === 'up' || direction === 'down')
+                  onPress(direction)
+              }}
+            >
+              {lines.slice(at, at + rows).map((line, i) => (
+                <BodyLine key={at + i} line={line} />
+              ))}
+            </box>
+          )}
         </>
       )}
     </Modal>

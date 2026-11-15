@@ -37,9 +37,9 @@ const config = {
     global: true,
   },
   prAgent: {
-    label: 'PR agent',
+    label: 'AI agent',
     description:
-      'write the title and the description of a new PR (needs the command of the AI CLI)',
+      'write new PRs and commit messages (needs the command of the AI CLI)',
     options: ['claude', 'codex', 'opencode', 'off'],
     defaultValue: 'claude',
     global: true,

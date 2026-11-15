@@ -6,7 +6,8 @@ import type { RebaseState, Repo } from './data/git'
 import type { Pr } from './data/github'
 import type { MergedBranch } from './data/cleanup'
 import type { Row } from './data/model'
-import type { PrText } from './prDescription'
+import type { CommitScope } from './commitMessage'
+import { joinText, type PrText } from './prDescription'
 import { clearSnapshot, restoreSnapshot, saveSnapshot } from './data/undo'
 
 // Git cannot open an editor without a terminal. Keep the commit messages.
@@ -105,6 +106,36 @@ export async function push(
     return `pushed, PR #${pr.number} updated`
   }
   return 'pushed. Press P to create a PR'
+}
+
+// Push the branches of a stack from the bottom up to one branch. The
+// branches above it stay local. `names`: the branches to push, from the
+// bottom, without the merged ones. Each branch has its own lease, as with
+// gh stack push.
+export async function pushStackUpTo(
+  repo: Repo,
+  names: string[],
+): Promise<string> {
+  if (!names.length) throw new Error('no branch to push')
+  await run('git', ['push', '--force-with-lease', 'origin', ...names])
+  await clearSnapshot(repo.gitDir)
+  const count = `${names.length} branch${names.length > 1 ? 'es' : ''}`
+  return `pushed ${count} up to ${names.at(-1)}`
+}
+
+// Commit on the current branch with this message. `all` adds all the
+// changes first, also the new files.
+export async function commit(
+  scope: CommitScope,
+  message: PrText,
+): Promise<string> {
+  if (scope === 'all') await run('git', ['add', '--all'])
+  await run('git', ['commit', '--file', '-'], {
+    input: joinText(message),
+    env: NO_EDITOR,
+  })
+  const sha = await git(['rev-parse', '--short', 'HEAD'])
+  return `committed ${sha}. Press p to push`
 }
 
 // Push all the branches of a stack, and open the missing PRs as drafts.

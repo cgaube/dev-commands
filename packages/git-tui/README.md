@@ -132,27 +132,29 @@ When the terminal is less than 100 columns wide, the pane goes below the list.
 
 ## Keys
 
-| Key           | Action                                         |
-| ------------- | ---------------------------------------------- |
-| `↑ ↓` / `j k` | select a branch                                |
-| `g` / `G`     | go to the first / last branch                  |
-| `enter`       | check out the branch, or open a fold           |
-| `z`           | fold or open the merged branches of a stack    |
-| `n`           | start a normal branch from the default branch  |
-| `s`           | stack: add a branch on top of the stack        |
-| `p`           | push to origin, no PR (stack: `gh stack push`) |
-| `P`           | create a PR (stack: `gh stack submit`)         |
-| `r`           | rebase onto the parent, without a push         |
-| `S`           | sync the stack; on `main`: update, clean up    |
-| `o`           | open the PR in the browser                     |
-| `d`           | delete a normal branch                         |
-| `a`           | let Claude fix the conflicts of a rebase       |
-| `u`           | undo the last rebase or sync                   |
-| `c`           | continue the rebase                            |
-| `A`           | abort the rebase                               |
-| `R`           | reload the branches and the PRs                |
-| `?`           | show the keys                                  |
-| `q` / `esc`   | quit (asks first; `ctrl+c` quits at once)      |
+| Key           | Action                                        |
+| ------------- | --------------------------------------------- |
+| `↑ ↓` / `j k` | select a branch                               |
+| `g` / `G`     | go to the first / last branch                 |
+| `/`           | filter the branches by name                   |
+| `enter`       | check out the branch, or open a fold          |
+| `z`           | fold or open the merged branches of a stack   |
+| `n`           | start a normal branch from the default branch |
+| `s`           | stack: add a branch on top of the stack       |
+| `C`           | commit the changes of the current branch      |
+| `p`           | push to origin, no PR (stack: all, or up to)  |
+| `P`           | create a PR (stack: `gh stack submit`)        |
+| `r`           | rebase onto the parent, without a push        |
+| `S`           | sync the stack; on `main`: update, clean up   |
+| `o`           | open the PR in the browser                    |
+| `d`           | delete a normal branch                        |
+| `a`           | let Claude fix the conflicts of a rebase      |
+| `u`           | undo the last rebase or sync                  |
+| `c`           | continue the rebase                           |
+| `A`           | abort the rebase                              |
+| `R`           | reload the branches and the PRs               |
+| `?`           | show the keys                                 |
+| `q` / `esc`   | quit (asks first; `ctrl+c` quits at once)     |
 
 The footer shows the keys for the selected branch as key caps, and the status on
 the same line. When the window is too narrow, the status goes on its own line
@@ -269,10 +271,16 @@ start.
   `gh stack add <name>`. `s` on a normal branch makes a stack:
   `gh stack init --base <default> <branch> <name>`. The branch is the first
   branch of the stack, and the new branch comes after it.
-- `p` on a stack branch runs `gh stack submit --auto`. It pushes all the
-  branches of the stack and opens the missing PRs as drafts. `p` on a normal
-  branch runs `git push --force-with-lease`, then `gh pr create --draft --fill`
-  when the branch has no open PR.
+- `p` on a stack branch asks what to push. `enter` runs `gh stack push`: it
+  pushes all the branches of the stack. `h` pushes only the branches from the
+  bottom up to the selected branch, with
+  `git push --force-with-lease origin <branches>`. The branches above stay
+  local. `h` shows only when there are branches above. `p` on a normal branch
+  runs `git push --force-with-lease -u origin <branch>`. No PR is opened.
+- `P` on a stack branch runs `gh stack submit --auto`. It pushes all the
+  branches of the stack and opens the missing PRs as drafts. On a normal branch,
+  see [New PRs](#new-prs).
+- `C` commits the changes of the current branch. See [Commits](#commits).
 - `r` on a stack branch runs `gh stack rebase`. `r` on a normal branch runs
   `git rebase <default>`. Nothing is pushed: check the result, then press `p`.
 - `S` on a stack branch runs `gh stack sync --prune`. It fetches, rebases,
@@ -322,6 +330,7 @@ follows the PR rules of `CLAUDE.md` or `AGENTS.md`.
 | ------- | ------------------------------------------------------ |
 | `enter` | push, and open the PR as a draft                       |
 | `o`     | push, and open the PR ready for review                 |
+| `e`     | edit the title and the description in `$EDITOR`        |
 | `g`     | write the PR again                                     |
 | `↑ ↓`   | scroll a long description (the mouse wheel also works) |
 | `esc`   | cancel: nothing is pushed                              |
@@ -339,6 +348,46 @@ drafts. To change the setting:
 ```bash
 dev git-tui config init
 ```
+
+## Commits
+
+Press `C` when the current branch has changes. The footer shows `C` on the
+current branch only. The AI CLI of the `prAgent` setting writes the commit
+message, and a box shows it. Nothing is committed yet.
+
+- When you staged changes with `git add`, the commit takes only these changes.
+- When nothing is staged, the commit takes all the changes, new files too
+  (`git add --all`). The AI reads them from a temporary index: your index does
+  not change until you press `enter`.
+
+The AI reads the diff and the subjects of the last 10 commits. It follows the
+commit rules of `CLAUDE.md` or `AGENTS.md`, else the style of the recent
+commits.
+
+| Key     | Action                        |
+| ------- | ----------------------------- |
+| `enter` | commit with this message      |
+| `e`     | edit the message in `$EDITOR` |
+| `g`     | write the message again       |
+| `esc`   | cancel: nothing is committed  |
+
+On the default branch, `C` stops: press `n` to start a branch with the changes
+first. Without AI (`prAgent` is `off`, or its command is not installed), `C`
+opens `$EDITOR`. Git hooks run as usual.
+
+## The editor
+
+`e` opens the text in `$VISUAL`, else `$EDITOR`, else `vi`. The TUI stops while
+the editor runs. Save and close the editor to come back: the box shows the new
+text. The first line is the title (or the subject), and the rest is the body. An
+empty file changes nothing. A GUI editor must wait until you close the file, for
+example `EDITOR="code --wait"`.
+
+## Filter
+
+Press `/` and type to show only the branches whose name has all the words, in
+any case. `↑ ↓` select a branch while you type. `enter` keeps the filter, and
+the list title shows it. `esc` clears it.
 
 ## Conflicts
 

@@ -351,11 +351,23 @@ export function App({
 
   const busyRef = useRef(busy)
   busyRef.current = busy
-  useGitWatch(data?.repo.gitDir, data?.repo.commonDir, () => {
+  const reloadGit = () => {
     // An action reloads when it completes.
     if (!busyRef.current)
       void queryClient.invalidateQueries({ queryKey: ['git'] })
-  })
+  }
+  useGitWatch(data?.repo.gitDir, data?.repo.commonDir, reloadGit)
+  // The watcher does not see edits in the working tree. Reload when the
+  // terminal gets the focus again, for example after an edit in the editor.
+  const reloadGitRef = useRef(reloadGit)
+  reloadGitRef.current = reloadGit
+  useEffect(() => {
+    const onFocus = () => reloadGitRef.current()
+    renderer.on('focus', onFocus)
+    return () => {
+      renderer.off('focus', onFocus)
+    }
+  }, [renderer])
 
   const prWriting = mode.type === 'draft' && !mode.text && !mode.error
   const frame = useFrame(

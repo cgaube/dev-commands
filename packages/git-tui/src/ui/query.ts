@@ -4,7 +4,7 @@ import {
   queryOptions,
   skipToken,
 } from '@tanstack/react-query'
-import { branchCommits, changedFiles } from '#src/data/git'
+import { branchCommits } from '#src/data/git'
 import { listPrs, prCommits, type Pr } from '#src/data/github'
 import { loadModel, type Model, type Row } from '#src/data/model'
 import { readPrCache, writePrCache } from '#src/data/prCache'
@@ -23,10 +23,9 @@ export const queryClient = new QueryClient({
 // Each key is one data source, so that each one reloads at its own pace.
 // - git: local data. It is fast, and the git watcher reloads it.
 // - prs: GitHub data. It is slow, so it reloads on a timer.
-// - commits, files: the details of the selected branch.
+// - commits: the details of the selected branch.
 export const keys = {
   model: ['git', 'model'] as const,
-  files: ['git', 'files'] as const,
   commits: (row: Row, sha: string | undefined) =>
     ['git', 'commits', row.name, row.parent, sha] as const,
   prs: ['prs'] as const,
@@ -35,7 +34,8 @@ export const keys = {
 export const modelQuery = queryOptions({
   queryKey: keys.model,
   queryFn: loadModel,
-  // Only the git watcher and the actions make the data stale.
+  // Only the git watcher, the terminal focus and the actions make the data
+  // stale.
   staleTime: Infinity,
 })
 
@@ -94,13 +94,6 @@ export const prCommitsQuery = (pr: Pr | undefined) =>
     queryKey: ['prs', 'commits', pr?.number ?? null] as const,
     queryFn: pr ? () => prCommits(pr.number) : skipToken,
     staleTime: pr?.status === 'merged' ? Infinity : 60_000,
-  })
-
-export const filesQuery = (enabled: boolean) =>
-  queryOptions({
-    queryKey: keys.files,
-    queryFn: enabled ? changedFiles : skipToken,
-    staleTime: Infinity,
   })
 
 export type PrMap = Record<string, Pr>

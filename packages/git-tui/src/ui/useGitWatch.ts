@@ -4,9 +4,14 @@ import { GIT_REBASE_DIRS, STACK_REBASE_FILE } from '#src/data/git'
 
 // Watch the directories, not the single files: git and gh stack replace
 // files, and a watch on a replaced file stops. Only these names cause a
-// reload, so that index writes do not.
+// reload.
+// `index` changes on git add, reset and stash. The reload does not write it
+// back: the read-only git commands run with GIT_OPTIONAL_LOCKS=0 (see
+// exec.ts), so `git status` does not refresh the index, and there is no
+// reload loop. `index.lock` is not in the list, so one write reloads once.
 const OWN_FILES = new Set([
   'HEAD',
+  'index',
   'gh-stack',
   STACK_REBASE_FILE,
   ...GIT_REBASE_DIRS,
@@ -16,9 +21,10 @@ const SHARED_DIRS = ['refs/heads', 'refs/remotes']
 
 const DEBOUNCE_MS = 300
 
-// Call onChange when a branch, HEAD, the stacks or the rebase state change.
-// In a linked worktree, HEAD and the stack file are in the worktree's git
-// directory, and the branches are in the shared directory.
+// Call onChange when a branch, HEAD, the index, the stacks or the rebase
+// state change. In a linked worktree, HEAD, the index and the stack file are
+// in the worktree's git directory, and the branches are in the shared
+// directory.
 export function useGitWatch(
   gitDir: string | undefined,
   commonDir: string | undefined,

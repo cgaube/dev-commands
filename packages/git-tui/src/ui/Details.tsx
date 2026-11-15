@@ -5,7 +5,7 @@ import type { Pr, Review } from '#src/data/github'
 import type { Row } from '#src/data/model'
 import type { Fold } from './listItems'
 import { HintBar } from './Kbd'
-import { commitsQuery, filesQuery, prCommitsQuery, type PrMap } from './query'
+import { commitsQuery, prCommitsQuery, type PrMap } from './query'
 import { age, checkIcon, color, prColor, type Color } from './theme'
 
 // The most lines that one list in the pane shows.
@@ -304,7 +304,6 @@ function LocalSection({
   repo: Repo
   merged: boolean
 }) {
-  const files = useQuery(filesQuery(row.isCurrent && repo.changedFiles > 0))
   const notes: Array<[string, Color]> = []
   if (!row.exists) notes.push(['deleted locally (merged)', color.dim])
   if (row.unpushed) notes.push([`⇡ ${row.unpushed} to push`, color.cyan])
@@ -318,7 +317,7 @@ function LocalSection({
   if (row.exists && !row.hasRemote && row.kind !== 'trunk' && !merged) {
     notes.push(['not pushed yet', color.dim])
   }
-  const changed = row.isCurrent ? (files.data ?? []) : []
+  const changed = row.isCurrent ? repo.changes : []
   if (!notes.length && !changed.length) return null
   return (
     <>

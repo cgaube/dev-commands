@@ -23,7 +23,7 @@ const TEMPLATES = [
 
 const PROMPT = `You write the title and the description of a GitHub pull request. The input below has the branch name, the base branch, the commits, the diff stat and the diff (it can end with a "[diff truncated]" marker).
 
-The project instructions (CLAUDE.md or AGENTS.md) can define a format for PR titles or descriptions. If they do, you MUST use that format. Get the ticket key from the branch name when one is given.
+The project rules win over every default in this prompt. The project rules are the instructions of the repository: CLAUDE.md, AGENTS.md, CONTRIBUTING.md and similar files. When they define a format for PR titles or descriptions (for example a ticket key, a prefix or a template), you MUST use that format. Use the defaults below only for what the rules do not say. Get the ticket key from the branch name when the rules want one.
 
 When the input has a PR template, fill in the template: keep its headings, and remove the parts that do not apply.
 

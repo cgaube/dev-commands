@@ -11,7 +11,7 @@ import { cutDiff, splitText, type PrText } from './prDescription'
 
 const PROMPT = `You write a git commit message for the changes below. The input has the branch name, the subjects of the recent commits, the diff stat and the diff (it can end with a "[diff truncated]" marker).
 
-The project instructions (CLAUDE.md or AGENTS.md) can define a format for commit messages. If they do, you MUST use that format. If not, use the style of the recent commits.
+The project rules win over every default in this prompt. The project rules are the instructions of the repository: CLAUDE.md, AGENTS.md, CONTRIBUTING.md, a commitlint config, a git commit template and similar files. When they define a format for commit messages (for example Conventional Commits or a ticket key), you MUST use that format. Use the defaults below only for what the rules do not say. When the rules say nothing about commits, use the style of the recent commits.
 
 Write in ASD-STE100 Simplified Technical English: short sentences, simple words, active voice.
 

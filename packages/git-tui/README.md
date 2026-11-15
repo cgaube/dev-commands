@@ -323,8 +323,8 @@ branch that has no open PR. An AI CLI writes the title and the description of
 the PR, and a box shows them. Nothing is pushed yet.
 
 The AI reads the commits, the diff against the default branch, and the PR
-template of the repository when there is one. It runs in the repository, so it
-follows the PR rules of `CLAUDE.md` or `AGENTS.md`.
+template of the repository when there is one. It follows the
+[project rules](#project-rules).
 
 | Key     | Action                                                 |
 | ------- | ------------------------------------------------------ |
@@ -361,8 +361,8 @@ index does not change until you press `enter`. To commit only some files, use
 git in a terminal.
 
 The AI reads the diff and the subjects of the last 10 commits. It follows the
-commit rules of `CLAUDE.md` or `AGENTS.md`, else the style of the recent
-commits.
+[project rules](#project-rules). When the rules say nothing about commits, it
+uses the style of the recent commits.
 
 | Key     | Action                        |
 | ------- | ----------------------------- |
@@ -374,6 +374,18 @@ commits.
 On the default branch, `C` stops: press `n` to start a branch with the changes
 first. Without AI (`prAgent` is `off`, or its command is not installed), `C`
 opens `$EDITOR`. Git hooks run as usual.
+
+## Project rules
+
+The AI CLI runs in the repository, so it reads the instructions of the
+repository itself (for example `CLAUDE.md` or `AGENTS.md`). The prompts tell it
+that these rules win over the defaults of the TUI (for example Simplified
+Technical English, or a "## Changes" list). The defaults apply only to what the
+rules do not say.
+
+Each AI CLI reads its own files. Claude Code (v2.1.277 or later) reads
+`AGENTS.md` only when the repository has no `CLAUDE.md`. When a repository has
+both, add the line `@AGENTS.md` to `CLAUDE.md` to import it.
 
 ## The editor
 

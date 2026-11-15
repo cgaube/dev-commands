@@ -1,4 +1,9 @@
+import { createBrewCommand } from './brew'
 import { createPortCommand } from './port'
 import { createStayAwakeCommand } from './stay-awake'
 
-export const commands = [createStayAwakeCommand, createPortCommand]
+export const commands = [
+  createStayAwakeCommand,
+  createPortCommand,
+  createBrewCommand,
+]

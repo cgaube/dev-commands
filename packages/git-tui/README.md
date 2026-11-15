@@ -50,8 +50,8 @@ and the default branch is at the bottom, because all work starts from it.
 - Each stack, and the standalone branches, have a line on the left, from the
   header to the last branch.
 - The dot shows the state of each branch: `●` the current branch, `○` an open
-  branch, `✓` a merged branch, `·` a branch that does not exist locally, `◆` the
-  default branch.
+  branch, `✓` a merged branch (green when it is the current branch), `·` a
+  branch that does not exist locally, `◆` the default branch.
 - Two or more merged branches of a stack fold into one line, for example
   `✓ 1–3 3 merged ▸`. Press `enter` or click the line to open it. Press `z` on a
   branch of the stack to fold them again.
@@ -62,6 +62,13 @@ and the default branch is at the bottom, because all work starts from it.
 - A normal branch is a local branch that is not in a stack. Its parent is always
   the default branch.
 - The newest normal branches are first.
+- A normal branch without a commit for 14 days goes to the `stale` section,
+  below the standalone branches. The current branch stays in `standalone`. The
+  `staleDays` setting changes the number of days, and `0` turns the section off:
+
+  ```bash
+  dev git-tui config init
+  ```
 
 New stacks always start from the default branch. A stack that a terminal command
 made on another trunk shows the trunk in its header, for example
@@ -129,13 +136,16 @@ When the terminal is less than 100 columns wide, the pane goes below the list.
 | ------------- | --------------------------------------------- |
 | `↑ ↓` / `j k` | select a branch                               |
 | `g` / `G`     | go to the first / last branch                 |
+| `/`           | filter the branches by name                   |
 | `enter`       | check out the branch, or open a fold          |
 | `z`           | fold or open the merged branches of a stack   |
 | `n`           | start a normal branch from the default branch |
 | `s`           | stack: add a branch on top of the stack       |
-| `p`           | push and open a draft PR                      |
+| `C`           | commit the changes of the current branch      |
+| `p`           | push to origin, no PR (stack: all, or up to)  |
+| `P`           | create a PR (stack: `gh stack submit`)        |
 | `r`           | rebase onto the parent, without a push        |
-| `S`           | sync the stack, or update the default branch  |
+| `S`           | sync the stack; on `main`: update, clean up   |
 | `o`           | open the PR in the browser                    |
 | `d`           | delete a normal branch                        |
 | `a`           | let Claude fix the conflicts of a rebase      |
@@ -144,7 +154,7 @@ When the terminal is less than 100 columns wide, the pane goes below the list.
 | `A`           | abort the rebase                              |
 | `R`           | reload the branches and the PRs               |
 | `?`           | show the keys                                 |
-| `q` / `esc`   | quit                                          |
+| `q` / `esc`   | quit (asks first; `ctrl+c` quits at once)     |
 
 The footer shows the keys for the selected branch as key caps, and the status on
 the same line. When the window is too narrow, the status goes on its own line
@@ -155,15 +165,29 @@ above the keys. Click a key cap to run its action.
 A question opens in a box in the middle of the screen, and the rest of the
 screen is dim until you answer. The color tells the risk:
 
-| Color  | Questions                                                       |
-| ------ | --------------------------------------------------------------- |
-| blue   | the name of a new branch                                        |
-| yellow | changes that you can undo: abort a rebase, undo, remove a stack |
-| red    | changes that can lose work: delete a branch                     |
+| Color  | Questions                                                                       |
+| ------ | ------------------------------------------------------------------------------- |
+| blue   | the name of a new branch, quit, and all other actions: check out, push, rebase… |
+| yellow | changes that you can undo: abort a rebase, undo, remove a stack                 |
+| red    | changes that can lose work: delete a branch                                     |
 
-Press the key that the box shows, for example `y`. `enter` never confirms a
-change, and all other keys cancel. Messages that need no answer, for example
+Each key that runs an action opens a box first. The box tells what will happen.
+Then a key press meant for another terminal window does not change the
+repository.
+
+Press the key that the box shows. In a blue box, `enter` confirms. In a yellow
+or red box, press `y`: there `enter` never confirms. All other keys cancel. For
+0.4 seconds after the box opens, all keys cancel it: fast typing does not
+confirm a box that you did not read. Messages that need no answer, for example
 `pushed` or an error of a command, show in the status line only.
+
+The status line shows a running action with an animation until it ends. Then the
+result stays for 5 seconds and goes away. The `statusSeconds` setting changes
+the time, and `0` keeps each message until the next one:
+
+```bash
+dev git-tui config init
+```
 
 ## Mouse
 
@@ -171,10 +195,17 @@ change, and all other keys cancel. Messages that need no answer, for example
 | --------------------- | ------------------------------- |
 | click a branch        | select it                       |
 | double-click a branch | check it out                    |
+| right-click a branch  | open a menu of its actions      |
+| drag over text        | copy it to the clipboard        |
 | scroll on the list    | move the selection              |
 | click a key cap       | run its action, as the key does |
 | click the PR title    | open the PR in the browser      |
 | click a CI check      | open the page of the check      |
+
+A drag over any text copies it. A double-click copies a word, and a triple click
+copies a line. On a local Mac the TUI uses `pbcopy`. Elsewhere it uses OSC 52,
+which the terminal must allow (iTerm2: "Applications in terminal may access
+clipboard"; tmux: `set-clipboard on`).
 
 ## Themes
 
@@ -240,10 +271,16 @@ start.
   `gh stack add <name>`. `s` on a normal branch makes a stack:
   `gh stack init --base <default> <branch> <name>`. The branch is the first
   branch of the stack, and the new branch comes after it.
-- `p` on a stack branch runs `gh stack submit --auto`. It pushes all the
-  branches of the stack and opens the missing PRs as drafts. `p` on a normal
-  branch runs `git push --force-with-lease`, then `gh pr create --draft --fill`
-  when the branch has no open PR.
+- `p` on a stack branch asks what to push. `enter` runs `gh stack push`: it
+  pushes all the branches of the stack. `h` pushes only the branches from the
+  bottom up to the selected branch, with
+  `git push --force-with-lease origin <branches>`. The branches above stay
+  local. `h` shows only when there are branches above. `p` on a normal branch
+  runs `git push --force-with-lease -u origin <branch>`. No PR is opened.
+- `P` on a stack branch runs `gh stack submit --auto`. It pushes all the
+  branches of the stack and opens the missing PRs as drafts. On a normal branch,
+  see [New PRs](#new-prs).
+- `C` commits the changes of the current branch. See [Commits](#commits).
 - `r` on a stack branch runs `gh stack rebase`. `r` on a normal branch runs
   `git rebase <default>`. Nothing is pushed: check the result, then press `p`.
 - `S` on a stack branch runs `gh stack sync --prune`. It fetches, rebases,
@@ -261,6 +298,108 @@ start.
 
 `gh stack` commands act on the stack of the current branch. Thus the TUI checks
 out the selected branch before it runs them.
+
+## Update and clean up
+
+Press `S` on the default branch. The TUI:
+
+1. Fetches origin with `--prune`, and fast-forwards the default branch. When it
+   has local commits, it stops.
+2. Syncs each stack that has merged branches (`gh stack sync --prune`). This
+   pushes the stack. Then it checks out your branch again, or the default branch
+   when the sync deleted yours. A conflict stops all: fix the rebase first.
+3. Looks for local branches whose work is in the default branch: merged, or
+   squash-merged (the check of `git delete-squashed-branches` from git-extras,
+   without git-extras). A yellow box lists them. Press `y` to delete them.
+
+The cleanup never deletes a stack branch, the current branch, or a branch that
+another worktree uses: `gh stack` must delete stack branches, or the stack
+breaks. It deletes local branches only, not the branches on origin.
+
+## New PRs
+
+`p` only pushes the branch to origin. To create a PR, press `P` on a normal
+branch that has no open PR. An AI CLI writes the title and the description of
+the PR, and a box shows them. Nothing is pushed yet.
+
+The AI reads the commits, the diff against the default branch, and the PR
+template of the repository when there is one. It follows the
+[project rules](#project-rules).
+
+| Key     | Action                                                 |
+| ------- | ------------------------------------------------------ |
+| `enter` | push, and open the PR as a draft                       |
+| `o`     | push, and open the PR ready for review                 |
+| `e`     | edit the title and the description in `$EDITOR`        |
+| `g`     | write the PR again                                     |
+| `↑ ↓`   | scroll a long description (the mouse wheel also works) |
+| `esc`   | cancel: nothing is pushed                              |
+
+When the AI fails, the box tells why. Then `enter` and `o` open the PR with the
+commit messages (`gh pr create --fill`). The keys do nothing for 0.4 seconds
+after the text shows.
+
+The `prAgent` setting picks the AI CLI: `claude` (the default), `codex`,
+`opencode`, or `off`. With `off`, or when its command is not installed, `P` asks
+to push and opens a draft PR with the commit messages. On a stack, `P` runs
+`gh stack submit`: it pushes all the branches and opens the missing PRs as
+drafts. To change the setting:
+
+```bash
+dev git-tui config init
+```
+
+## Commits
+
+Press `C` when the current branch has changes. The footer shows `C` on the
+current branch only. The AI CLI of the `prAgent` setting writes the commit
+message, and a box shows it. Nothing is committed yet.
+
+The commit takes all the changes, new files too: `enter` runs `git add --all`,
+then `git commit`. The AI reads the changes from a temporary index, so your
+index does not change until you press `enter`. To commit only some files, use
+git in a terminal.
+
+The AI reads the diff and the subjects of the last 10 commits. It follows the
+[project rules](#project-rules). When the rules say nothing about commits, it
+uses the style of the recent commits.
+
+| Key     | Action                        |
+| ------- | ----------------------------- |
+| `enter` | commit with this message      |
+| `e`     | edit the message in `$EDITOR` |
+| `g`     | write the message again       |
+| `esc`   | cancel: nothing is committed  |
+
+On the default branch, `C` stops: press `n` to start a branch with the changes
+first. Without AI (`prAgent` is `off`, or its command is not installed), `C`
+opens `$EDITOR`. Git hooks run as usual.
+
+## Project rules
+
+The AI CLI runs in the repository, so it reads the instructions of the
+repository itself (for example `CLAUDE.md` or `AGENTS.md`). The prompts tell it
+that these rules win over the defaults of the TUI (for example Simplified
+Technical English, or a "## Changes" list). The defaults apply only to what the
+rules do not say.
+
+Each AI CLI reads its own files. Claude Code (v2.1.277 or later) reads
+`AGENTS.md` only when the repository has no `CLAUDE.md`. When a repository has
+both, add the line `@AGENTS.md` to `CLAUDE.md` to import it.
+
+## The editor
+
+`e` opens the text in `$VISUAL`, else `$EDITOR`, else `vi`. The TUI stops while
+the editor runs. Save and close the editor to come back: the box shows the new
+text. The first line is the title (or the subject), and the rest is the body. An
+empty file changes nothing. A GUI editor must wait until you close the file, for
+example `EDITOR="code --wait"`.
+
+## Filter
+
+Press `/` and type to show only the branches whose name has all the words, in
+any case. `↑ ↓` select a branch while you type. `enter` keeps the filter, and
+the list title shows it. `esc` clears it.
 
 ## Conflicts
 

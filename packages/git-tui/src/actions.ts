@@ -4,7 +4,9 @@
 import { CommandError, gh, git, gitOrNull, run } from './data/exec'
 import type { RebaseState, Repo } from './data/git'
 import type { Pr } from './data/github'
+import type { MergedBranch } from './data/cleanup'
 import type { Row } from './data/model'
+import { joinText, type PrText } from './prDescription'
 import { clearSnapshot, restoreSnapshot, saveSnapshot } from './data/undo'
 
 // Git cannot open an editor without a terminal. Keep the commit messages.
@@ -80,8 +82,9 @@ export async function stackBranch(
   return `made a stack: ${row.name} → ${name}`
 }
 
-// Push the branch and open a draft PR. For a stack, push all its branches
-// and open the missing PRs.
+// Push the branch to origin, without a PR. An open PR gets the new commits.
+// For a stack, push all its branches (`gh stack push`, with a lease for each
+// branch).
 export async function push(
   repo: Repo,
   row: Row,
@@ -89,7 +92,7 @@ export async function push(
 ): Promise<string> {
   if (row.stack) {
     await checkout(row.name)
-    await stackCommand(['submit', '--auto'])
+    await stackCommand(['push'])
     await clearSnapshot(repo.gitDir)
     return 'pushed the stack'
   }
@@ -101,24 +104,83 @@ export async function push(
   if (pr && pr.status !== 'merged' && pr.status !== 'closed') {
     return `pushed, PR #${pr.number} updated`
   }
-  await gh([
-    'pr',
-    'create',
-    '--draft',
-    '--fill',
-    '--head',
-    row.name,
-    '--base',
-    repo.defaultBranch,
-  ])
-  return `pushed, draft PR opened`
+  return 'pushed. Press P to create a PR'
+}
+
+// Push the branches of a stack from the bottom up to one branch. The
+// branches above it stay local. `names`: the branches to push, from the
+// bottom, without the merged ones. Each branch has its own lease, as with
+// gh stack push.
+export async function pushStackUpTo(
+  repo: Repo,
+  names: string[],
+): Promise<string> {
+  if (!names.length) throw new Error('no branch to push')
+  await run('git', ['push', '--force-with-lease', 'origin', ...names])
+  await clearSnapshot(repo.gitDir)
+  const count = `${names.length} branch${names.length > 1 ? 'es' : ''}`
+  return `pushed ${count} up to ${names.at(-1)}`
+}
+
+// Add all the changes (also the new files), and commit them on the current
+// branch with this message.
+export async function commit(message: PrText): Promise<string> {
+  await run('git', ['add', '--all'])
+  await run('git', ['commit', '--file', '-'], {
+    input: joinText(message),
+    env: NO_EDITOR,
+  })
+  const sha = await git(['rev-parse', '--short', 'HEAD'])
+  return `committed ${sha}. Press p to push`
+}
+
+// Push all the branches of a stack, and open the missing PRs as drafts.
+export async function submitStack(repo: Repo, row: Row): Promise<string> {
+  if (!row.stack) throw new Error('select a stack branch')
+  await checkout(row.name)
+  await stackCommand(['submit', '--auto'])
+  await clearSnapshot(repo.gitDir)
+  return 'pushed the stack, PRs opened'
+}
+
+// Push a normal branch, and open a PR with the title and the description
+// that the user saw. Without them, gh fills the PR from the commits.
+export async function createPr(
+  repo: Repo,
+  row: Row,
+  { text, draft }: { text: PrText | null; draft: boolean },
+): Promise<string> {
+  if (row.kind !== 'branch') throw new Error('select a normal branch')
+  await run('git', ['push', '--force-with-lease', '-u', 'origin', row.name])
+  await clearSnapshot(repo.gitDir)
+  // The body goes through stdin: it can be long, and start with "-".
+  const url = await run(
+    'gh',
+    [
+      'pr',
+      'create',
+      ...(draft ? ['--draft'] : []),
+      '--head',
+      row.name,
+      '--base',
+      repo.defaultBranch,
+      ...(text ? ['--title', text.title, '--body-file', '-'] : ['--fill']),
+    ],
+    text ? { input: text.body } : {},
+  )
+  const number = url.match(/\/pull\/(\d+)/)?.[1]
+  const kind = draft ? 'draft PR' : 'PR'
+  return number ? `pushed, ${kind} #${number} opened` : `pushed, ${kind} opened`
 }
 
 // Update the default branch from origin. Never force: when the local branch
 // has its own commits, stop.
-async function updateTrunk(repo: Repo): Promise<string> {
+export async function updateTrunk(repo: Repo): Promise<string> {
   const main = repo.defaultBranch
-  await run('git', ['fetch', 'origin', main])
+  const before = await git(['rev-parse', main])
+  // Fetch all of origin, and remove the remote branches that GitHub deleted
+  // (for example after a merge).
+  await run('git', ['fetch', '--prune', 'origin'])
   if (repo.currentBranch === main) {
     await run('git', ['merge', '--ff-only', `origin/${main}`])
   } else {
@@ -128,7 +190,45 @@ async function updateTrunk(repo: Repo): Promise<string> {
       throw new Error(`${main} has local commits — not updated`)
     })
   }
-  return `${main} is up to date`
+  // Tell what came: "up to date" alone does not show that a merge came.
+  const count = Number(await git(['rev-list', '--count', `${before}..${main}`]))
+  if (!count) return `${main} was already up to date`
+  const pulled = `${main}: pulled ${count} commit${count > 1 ? 's' : ''}`
+  // The other branches do not get the commits: they need a rebase.
+  return repo.currentBranch && repo.currentBranch !== main
+    ? `${pulled}. Press r on ${repo.currentBranch} to rebase it`
+    : pulled
+}
+
+// Sync each of these stacks (one row of each stack), then check out the
+// branch of the user again. When a sync deleted that branch, check out the
+// default branch. A conflict stops all: the user fixes the rebase first.
+export async function syncStacks(repo: Repo, rows: Row[]): Promise<string> {
+  const back = repo.currentBranch
+  for (const row of rows) await sync(repo, row)
+  const target =
+    back && (await gitOrNull(['rev-parse', '--verify', `refs/heads/${back}`]))
+      ? back
+      : repo.defaultBranch
+  await checkout(target)
+  return `synced ${rows.length} stack${rows.length > 1 ? 's' : ''}`
+}
+
+// Delete local branches whose work is in the default branch. See
+// data/cleanup.ts. A squash-merged branch needs -D: git does not see that
+// merge.
+export async function deleteMergedBranches(
+  branches: MergedBranch[],
+): Promise<string> {
+  const failed: string[] = []
+  for (const { name, how } of branches) {
+    await run('git', ['branch', how === 'merged' ? '-d' : '-D', name]).catch(
+      () => failed.push(name),
+    )
+  }
+  const done = branches.length - failed.length
+  const deleted = `deleted ${done} branch${done === 1 ? '' : 'es'}`
+  return failed.length ? `${deleted}, not ${failed.join(', ')}` : deleted
 }
 
 // Sync a stack with GitHub: fetch, rebase onto the trunk, push, and delete

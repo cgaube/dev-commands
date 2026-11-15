@@ -68,6 +68,21 @@ export function sectionItems(
   return items
 }
 
+// Keep the branches whose name has all the words of the query, in any
+// case. The sections without a branch go away.
+export function filterSections(sections: Section[], query: string): Section[] {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+  if (!words.length) return sections
+  return sections
+    .map((section) => ({
+      ...section,
+      rows: section.rows.filter((row) =>
+        words.every((word) => row.name.toLowerCase().includes(word)),
+      ),
+    }))
+    .filter((section) => section.rows.length)
+}
+
 // All the items of the list, in order. The keyboard moves through them.
 export function listItems(
   sections: Section[],

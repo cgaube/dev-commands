@@ -22,6 +22,28 @@ const config = {
     defaultValue: 'claude',
     global: true,
   },
+  statusSeconds: {
+    label: 'Status time (seconds)',
+    description:
+      'hide a status message after this number of seconds (0 keeps it)',
+    defaultValue: '5',
+    global: true,
+  },
+  staleDays: {
+    label: 'Stale after (days)',
+    description:
+      'move a branch without a commit for this number of days to the stale section (0 turns it off)',
+    defaultValue: '14',
+    global: true,
+  },
+  prAgent: {
+    label: 'AI agent',
+    description:
+      'write new PRs and commit messages (needs the command of the AI CLI)',
+    options: ['claude', 'codex', 'opencode', 'off'],
+    defaultValue: 'claude',
+    global: true,
+  },
 } satisfies ConfigSchema
 
 export const { getConfig, injectConfigCommands } = setupProgramConfiguration(

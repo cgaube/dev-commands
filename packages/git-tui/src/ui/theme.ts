@@ -1,5 +1,6 @@
 import { writeSync } from 'fs'
 import { RGBA } from '@opentui/core'
+import type { TerminalColors } from './terminalColors'
 import type { CiStatus, CheckState, PrStatus } from '#src/data/github'
 
 export type Color = RGBA
@@ -350,9 +351,42 @@ export const THEME_IDS: ThemeId[] = THEMES.map((t) => t.id)
 export const color: Palette = { ...terminal }
 
 // Use a theme. An unknown id uses the default theme.
+// Mix two colors: `amount` 0 gives `from`, 1 gives `to`.
+function mix(from: RGBA, to: RGBA, amount: number): RGBA {
+  const [r1, g1, b1] = from.toInts()
+  const [r2, g2, b2] = to.toInts()
+  const at = (a: number, b: number) => Math.round(a + (b - a) * amount)
+  return RGBA.fromInts(at(r1, r2), at(g1, g2), at(b1, b2))
+}
+
+// Make the grays of the terminal theme from the real colors of the
+// terminal. "Bright black" (ANSI 8) is near the background in many terminal
+// themes (for example in Warp), and then the dim text does not show. A mix of
+// the text color and the background always shows, on a light or a dark
+// terminal. The text and the background stay the default colors of the
+// terminal: the TUI does not paint a background.
+// When the terminal does not tell its colors, keep ANSI 8.
+export function adaptTerminalTheme({ fg, bg }: TerminalColors) {
+  if (!fg || !bg) return
+  const text = RGBA.fromHex(fg)
+  const back = RGBA.fromHex(bg)
+  Object.assign(terminal, {
+    // Labels, ages, hints: secondary text, easy to read.
+    dim: mix(back, text, 0.6),
+    // Borders and rails: they only separate.
+    faint: mix(back, text, 0.3),
+    // The selected row: a band that dim text still shows on.
+    selected: mix(back, text, 0.15),
+  })
+  if (current === 'terminal') Object.assign(color, terminal)
+}
+
+let current: ThemeId = 'terminal'
+
 export function applyTheme(id: unknown): ThemeId {
   const theme = THEMES.find((t) => t.id === id) ?? THEMES[0]
   Object.assign(color, theme.palette)
+  current = theme.id
   paintTerminalBackground(theme.id)
   return theme.id
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Model } from '#src/data/model'
+import { Activity } from './Activity'
 import { Kbd } from './Kbd'
 import { age, color } from './theme'
 
@@ -51,7 +52,7 @@ function ThemeButton({
 export function Header({
   repoName,
   model,
-  spinner,
+  frame,
   prsUpdatedAt,
   prsFetching,
   prsError,
@@ -60,7 +61,8 @@ export function Header({
 }: {
   repoName: string
   model: Model
-  spinner: string
+  // The animation frame. See Activity.
+  frame: number
   prsUpdatedAt: number
   prsFetching: boolean
   prsError: string | null
@@ -70,11 +72,14 @@ export function Header({
   const now = useNow()
   const { repo } = model
   const stacks = model.sections.filter((s) => s.kind === 'stack').length
-  const branches =
-    model.sections.find((s) => s.kind === 'branch')?.rows.length ?? 0
+  const rowsOf = (kind: string) =>
+    model.sections.find((s) => s.kind === kind)?.rows.length ?? 0
+  const branches = rowsOf('branch')
+  const stale = rowsOf('stale')
   const counts = [
     stacks && `${stacks} stack${stacks > 1 ? 's' : ''}`,
     branches && `${branches} branch${branches > 1 ? 'es' : ''}`,
+    stale && `${stale} stale`,
   ]
     .filter(Boolean)
     .join(' · ')
@@ -82,7 +87,7 @@ export function Header({
   const prState = prsError ? (
     <span fg={color.red}>gh: {prsError.slice(0, 40)}</span>
   ) : prsFetching ? (
-    <span fg={color.dim}>{spinner} reading PRs</span>
+    <Activity text="reading PRs" frame={frame} />
   ) : prsUpdatedAt ? (
     <span fg={color.dim}>PRs {since(prsUpdatedAt, now)} ago</span>
   ) : null

@@ -355,10 +355,10 @@ Press `C` when the current branch has changes. The footer shows `C` on the
 current branch only. The AI CLI of the `prAgent` setting writes the commit
 message, and a box shows it. Nothing is committed yet.
 
-- When you staged changes with `git add`, the commit takes only these changes.
-- When nothing is staged, the commit takes all the changes, new files too
-  (`git add --all`). The AI reads them from a temporary index: your index does
-  not change until you press `enter`.
+The commit takes all the changes, new files too: `enter` runs `git add --all`,
+then `git commit`. The AI reads the changes from a temporary index, so your
+index does not change until you press `enter`. To commit only some files, use
+git in a terminal.
 
 The AI reads the diff and the subjects of the last 10 commits. It follows the
 commit rules of `CLAUDE.md` or `AGENTS.md`, else the style of the recent

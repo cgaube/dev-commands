@@ -5,14 +5,9 @@ import { mkdtemp, rm } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import type { AIProvider } from '#common/ai'
-import { git, gitOrNull, run } from './data/exec'
+import { gitOrNull, run } from './data/exec'
 import type { Repo } from './data/git'
 import { cutDiff, splitText, type PrText } from './prDescription'
-
-// What the commit takes. `staged`: only the changes in the index, because
-// the user chose them with git add. `all`: all the changes, also the new
-// files.
-export type CommitScope = 'staged' | 'all'
 
 const PROMPT = `You write a git commit message for the changes below. The input has the branch name, the subjects of the recent commits, the diff stat and the diff (it can end with a "[diff truncated]" marker).
 
@@ -31,25 +26,9 @@ Body (from line 3, optional)
 
 Output only the commit message. No preamble, no code fences.`
 
-// When the user staged changes, commit only them. Else commit all.
-export async function commitScope(): Promise<CommitScope> {
-  // `--quiet` fails when the index has changes.
-  const clean = await gitOrNull(['diff', '--cached', '--quiet'])
-  return clean === null ? 'staged' : 'all'
-}
-
-// The diff of the commit. For `all`, add all the changes to a temporary
-// index: the index of the user stays as it is until the commit.
-async function commitDiff(
-  scope: CommitScope,
-): Promise<{ stat: string; diff: string }> {
-  if (scope === 'staged') {
-    const [stat, diff] = await Promise.all([
-      git(['diff', '--cached', '--stat']),
-      git(['diff', '--cached']),
-    ])
-    return { stat, diff }
-  }
+// The diff of the commit: all the changes, also the new files. Add them to
+// a temporary index: the index of the user stays as it is until the commit.
+async function commitDiff(): Promise<{ stat: string; diff: string }> {
   const dir = await mkdtemp(join(tmpdir(), 'git-tui-'))
   const env = { GIT_INDEX_FILE: join(dir, 'index'), GIT_OPTIONAL_LOCKS: '0' }
   try {
@@ -70,10 +49,9 @@ async function commitDiff(
 export async function generateCommitMessage(
   provider: AIProvider,
   repo: Repo,
-  scope: CommitScope,
 ): Promise<PrText> {
   const [{ stat, diff }, recent] = await Promise.all([
-    commitDiff(scope),
+    commitDiff(),
     gitOrNull(['log', '-10', '--format=- %s']),
   ])
   if (!diff) throw new Error('nothing to commit')

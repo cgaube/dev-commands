@@ -38,11 +38,7 @@ import { Modal, type Severity } from './Modal'
 import { DraftModal, draftLayout } from './DraftModal'
 import { editText } from './editor'
 import type { AIProvider } from '#common/ai'
-import {
-  commitScope,
-  generateCommitMessage,
-  type CommitScope,
-} from '#src/commitMessage'
+import { generateCommitMessage } from '#src/commitMessage'
 import { generatePrText, splitText, type PrText } from '#src/prDescription'
 import { keys, modelQuery, prsQuery, queryClient, type PrMap } from './query'
 import { applyTheme, color, THEME_IDS, themeLabel, type ThemeId } from './theme'
@@ -96,9 +92,7 @@ type Status = {
 type Action = { label: string; fn: () => Promise<string> }
 
 // What a draft is for: a PR of a branch, or a commit on the current branch.
-type DraftTarget =
-  | { kind: 'pr'; row: Row }
-  | { kind: 'commit'; scope: CommitScope }
+type DraftTarget = { kind: 'pr'; row: Row } | { kind: 'commit' }
 type DraftMode = Extract<Mode, { type: 'draft' }>
 
 // The footer shows the key hints and the status on one line when they fit.
@@ -386,7 +380,7 @@ export function App({
     const job =
       target.kind === 'pr'
         ? generatePrText(prAgent, data.repo, target.row)
-        : generateCommitMessage(prAgent, data.repo, target.scope)
+        : generateCommitMessage(prAgent, data.repo)
     job.then(
       (text) => answer({ text }),
       (error) =>
@@ -446,16 +440,14 @@ export function App({
         text: `you are on ${repo.defaultBranch}: press n to start a branch with these changes`,
         variant: 'error',
       })
-    commitScope().then((scope) => {
-      const target: DraftTarget = { kind: 'commit', scope }
-      if (prAgent) return writeDraft(target)
-      return editDraft({
-        type: 'draft',
-        target,
-        offset: 0,
-        readyAt: 0,
-        error: 'write the commit message in the editor (press e)',
-      })
+    const target: DraftTarget = { kind: 'commit' }
+    if (prAgent) return writeDraft(target)
+    void editDraft({
+      type: 'draft',
+      target,
+      offset: 0,
+      readyAt: 0,
+      error: 'write the commit message in the editor (press e)',
     })
   }
 
@@ -814,9 +806,7 @@ export function App({
           if (target.kind === 'pr') return submitPr(true)
           if (!text) return
           setMode({ type: 'list' })
-          return runAction('committing…', () =>
-            actions.commit(target.scope, text),
-          )
+          return runAction('committing…', () => actions.commit(text))
         case 'o':
           return submitPr(false)
       }
@@ -1236,11 +1226,7 @@ export function App({
     const files = data?.repo.changedFiles ?? 0
     return {
       title: 'Commit',
-      subtitle: `${data?.repo.currentBranch} · ${
-        draft.target.scope === 'staged'
-          ? 'the staged changes only'
-          : `all the changes (${files} file${files === 1 ? '' : 's'}, new files too)`
-      }`,
+      subtitle: `${data?.repo.currentBranch} · ${`all the changes: ${files} file${files === 1 ? '' : 's'}, new files too`}`,
       writing: `${ai} is writing the commit message`,
       hints: ready
         ? [

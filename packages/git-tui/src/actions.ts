@@ -6,7 +6,6 @@ import type { RebaseState, Repo } from './data/git'
 import type { Pr } from './data/github'
 import type { MergedBranch } from './data/cleanup'
 import type { Row } from './data/model'
-import type { CommitScope } from './commitMessage'
 import { joinText, type PrText } from './prDescription'
 import { clearSnapshot, restoreSnapshot, saveSnapshot } from './data/undo'
 
@@ -123,13 +122,10 @@ export async function pushStackUpTo(
   return `pushed ${count} up to ${names.at(-1)}`
 }
 
-// Commit on the current branch with this message. `all` adds all the
-// changes first, also the new files.
-export async function commit(
-  scope: CommitScope,
-  message: PrText,
-): Promise<string> {
-  if (scope === 'all') await run('git', ['add', '--all'])
+// Add all the changes (also the new files), and commit them on the current
+// branch with this message.
+export async function commit(message: PrText): Promise<string> {
+  await run('git', ['add', '--all'])
   await run('git', ['commit', '--file', '-'], {
     input: joinText(message),
     env: NO_EDITOR,

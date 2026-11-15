@@ -18,24 +18,41 @@ function errorLine(error: any): string {
   return line.replace(/^(error:|fatal:|✗)\s*/, '')
 }
 
-// Run a command and return its stdout. On failure, throw a CommandError with
-// one short line that the status bar can show.
-export async function run(
+// Run a command and return its stdout as it is, without the last newline.
+// On failure, throw a CommandError with one short line that the status bar
+// can show.
+async function runRaw(
   file: string,
   args: string[],
   options: Options = {},
 ): Promise<string> {
   try {
     const { stdout } = await execa(file, args, options)
-    return String(stdout).trim()
+    return String(stdout)
   } catch (error) {
     throw new CommandError(errorLine(error), { cause: error })
   }
 }
 
+// Run a command and return its stdout, trimmed.
+export async function run(
+  file: string,
+  args: string[],
+  options: Options = {},
+): Promise<string> {
+  return (await runRaw(file, args, options)).trim()
+}
+
 // Run a read-only git command.
 export function git(args: string[]): Promise<string> {
   return run('git', args, { env: READ_ONLY_ENV })
+}
+
+// Run a read-only git command, and return its lines. The spaces at the
+// start of the lines stay: in `git status --short`, they are a column.
+export async function gitLines(args: string[]): Promise<string[]> {
+  const out = await runRaw('git', args, { env: READ_ONLY_ENV })
+  return out.split('\n').filter(Boolean)
 }
 
 // Run a git command that can fail as part of a normal check. Returns null on

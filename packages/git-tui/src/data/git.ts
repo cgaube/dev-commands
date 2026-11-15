@@ -1,5 +1,5 @@
 import { existsSync } from 'fs'
-import { git, gitOrNull } from './exec'
+import { git, gitLines, gitOrNull } from './exec'
 
 // The data of one local branch that one `git for-each-ref` call gives.
 export type LocalBranch = {
@@ -217,6 +217,5 @@ export async function branchCommits(
 // The files with changes that are not committed, as `git status --short`
 // shows them.
 export async function changedFiles(): Promise<string[]> {
-  const out = await git(['status', '--short'])
-  return out.split('\n').filter(Boolean)
+  return gitLines(['status', '--short'])
 }

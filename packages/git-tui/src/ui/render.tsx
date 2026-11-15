@@ -5,13 +5,21 @@ import { App } from './App'
 import { queryClient } from './query'
 import { isClaudeInstalled } from '#src/claude'
 import { getConfig } from '#src/config'
-import { applyTheme, color } from './theme'
+import { prProvider } from '#src/prDescription'
+import { queryTerminalColors } from './terminalColors'
+import { adaptTerminalTheme, applyTheme, color } from './theme'
 
 // Show the TUI in the alternate screen, and wait until the user quits.
 export async function startTui(): Promise<void> {
   const theme = applyTheme(await getConfig('theme'))
   const agentEnabled =
     (await getConfig('conflictAgent')) !== 'off' && isClaudeInstalled()
+  const prAgent = await prProvider()
+  const seconds = Number(await getConfig('statusSeconds'))
+  const statusSeconds = Number.isFinite(seconds) ? seconds : 5
+  // Ask the terminal for its text and background colors, for the grays of
+  // the terminal theme. A terminal that does not answer keeps ANSI 8.
+  adaptTerminalTheme(await queryTerminalColors())
   const renderer = await createCliRenderer({
     exitOnCtrlC: false,
     screenMode: 'alternate-screen',
@@ -31,7 +39,13 @@ export async function startTui(): Promise<void> {
     }
     createRoot(renderer).render(
       <QueryClientProvider client={queryClient}>
-        <App onQuit={quit} initialTheme={theme} agentEnabled={agentEnabled} />
+        <App
+          onQuit={quit}
+          initialTheme={theme}
+          agentEnabled={agentEnabled}
+          prAgent={prAgent}
+          statusSeconds={statusSeconds}
+        />
       </QueryClientProvider>,
     )
   })

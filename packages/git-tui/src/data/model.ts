@@ -1,3 +1,4 @@
+import { getConfig } from '#src/config'
 import { leftRight, readRepo, type Repo } from './git'
 import { readStacks, type Stack } from './stacks'
 import { readSnapshot, type Snapshot } from './undo'
@@ -42,7 +43,9 @@ export type StackRef = {
 }
 
 export type Section = {
-  kind: RowKind
+  // `stale`: the normal branches without a commit for a long time. See
+  // staleDays.
+  kind: RowKind | 'stale'
   title: string
   rows: Row[]
 }
@@ -54,6 +57,16 @@ export type Model = {
   sections: Section[]
   // All the rows of all the sections, in the order the list shows them.
   rows: Row[]
+}
+
+const DAY_SECONDS = 24 * 60 * 60
+
+// The days without a commit after which a normal branch goes to the stale
+// section, from the `staleDays` setting. Null turns the section off: 0, or
+// a value that is not a number.
+async function staleDays(): Promise<number | null> {
+  const days = Number(await getConfig('staleDays'))
+  return Number.isFinite(days) && days > 0 ? days : null
 }
 
 function localRow(
@@ -137,9 +150,27 @@ export async function loadModel(): Promise<Model> {
   const sections: Section[] = await Promise.all(
     stacks.map((s) => stackSection(repo, s)),
   )
-  if (plain.length) {
+  // Old branches go below the others, in their own section. The current
+  // branch stays with the others: the user works on it.
+  const days = await staleDays()
+  const isStale = (row: Row) =>
+    days !== null &&
+    !row.isCurrent &&
+    // committedAt is in seconds, as git gives it.
+    row.committedAt !== null &&
+    Date.now() / 1000 - row.committedAt > days * DAY_SECONDS
+  const active = plain.filter((row) => !isStale(row))
+  const stale = plain.filter(isStale)
+  if (active.length) {
     // The list box is titled "branches", so name this section otherwise.
-    sections.push({ kind: 'branch', title: 'standalone', rows: plain })
+    sections.push({ kind: 'branch', title: 'standalone', rows: active })
+  }
+  if (stale.length) {
+    sections.push({
+      kind: 'stale',
+      title: `stale · no commit for ${days}d`,
+      rows: stale,
+    })
   }
   sections.push({ kind: 'trunk', title: main, rows: [trunk] })
   const undo = await readSnapshot(repo.gitDir)

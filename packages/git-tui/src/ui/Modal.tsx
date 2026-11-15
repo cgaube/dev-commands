@@ -17,6 +17,11 @@ const STYLE: Record<Severity, { icon: string; fg: () => Color }> = {
 // The widest that a modal can be, in cells.
 const MAX_WIDTH = 64
 
+// The width of a modal in a terminal of this width.
+export function modalWidth(width: number, maxWidth = MAX_WIDTH): number {
+  return Math.min(maxWidth, width - 4)
+}
+
 // A box in the middle of the screen, above the panes. The App dims the panes
 // while a modal is open, and sends all the keys to the modal.
 export function Modal({
@@ -27,6 +32,8 @@ export function Modal({
   hints,
   onPress,
   children,
+  maxWidth = MAX_WIDTH,
+  top,
 }: {
   severity: Severity
   title: string
@@ -36,14 +43,18 @@ export function Modal({
   hints: HintItem[]
   onPress: (key: string) => void
   children: ReactNode
+  // For a modal with much text, for example the preview of a PR.
+  maxWidth?: number
+  // The first row of the modal. By default, a third of the way down.
+  top?: number
 }) {
   const style = STYLE[severity]
-  const boxWidth = Math.min(MAX_WIDTH, width - 4)
+  const boxWidth = modalWidth(width, maxWidth)
   return (
     <box
       position="absolute"
       left={Math.max(0, Math.floor((width - boxWidth) / 2))}
-      top={Math.max(0, Math.floor(height / 3))}
+      top={top ?? Math.max(0, Math.floor(height / 3))}
       width={boxWidth}
       zIndex={10}
       flexDirection="column"

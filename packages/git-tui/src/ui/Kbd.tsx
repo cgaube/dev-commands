@@ -20,6 +20,11 @@ export function Kbd({ k }: { k: string }) {
   )
 }
 
+// The number of cells of a key cap.
+export function capWidth(k: string): number {
+  return (CAP[k] ?? k).length + 2
+}
+
 export type HintItem = {
   key: string
   label: string

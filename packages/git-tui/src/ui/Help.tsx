@@ -11,9 +11,10 @@ const KEYS: Array<[string[], string] | string> = [
   'Work',
   [['n'], 'start a new branch from the default branch'],
   [['s'], 'stack: add a branch on top (or make a stack)'],
-  [['p'], 'push and open a draft PR (stack: gh stack submit)'],
+  [['p'], 'push to origin, no PR (stack: gh stack push)'],
+  [['P'], 'create a PR: AI writes it (stack: gh stack submit)'],
   [['r'], 'rebase onto the parent, no push'],
-  [['S'], 'sync the stack (on the trunk: update it)'],
+  [['S'], 'sync the stack (trunk: update, clean up merged)'],
   [['o'], 'open the PR in the browser'],
   [['d'], 'delete a normal branch'],
   'Conflicts',
@@ -63,6 +64,8 @@ export function Help() {
 
 const MOUSE_HELP = [
   'click a branch to select it, double-click to check it out',
+  'right-click a branch for a menu of its actions',
+  'drag over text to copy it (double-click: a word, triple: a line)',
   'scroll the list with the wheel',
   'click a key cap to run its action',
   'click the theme name at the top right to choose a theme',

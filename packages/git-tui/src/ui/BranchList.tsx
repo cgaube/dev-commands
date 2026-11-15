@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { MouseButton, type MouseEvent } from '@opentui/core'
 import type { Pr } from '#src/data/github'
 import type { Row, Section } from '#src/data/model'
 import { age, ciIcon, color, prColor, type Color } from './theme'
@@ -125,10 +126,14 @@ function Badges({
 const DOUBLE_CLICK_MS = 400
 
 // The dot of a row: its state at a glance.
+// The icon of a branch. Merged comes before current: a merged PR on the
+// current branch must show. Then the ✓ is green, the color of the current
+// branch.
 function dot(row: Row, merged: boolean): { icon: string; fg: Color } {
+  if (merged && row.kind !== 'trunk')
+    return { icon: '✓', fg: row.isCurrent ? color.green : color.magenta }
   if (row.isCurrent) return { icon: '●', fg: color.green }
   if (row.kind === 'trunk') return { icon: '◆', fg: color.accent }
-  if (merged) return { icon: '✓', fg: color.magenta }
   if (!row.exists) return { icon: '·', fg: color.dim }
   return { icon: '○', fg: row.stack ? color.accent : color.dim }
 }
@@ -146,7 +151,7 @@ function RowLine({
   selected: boolean
   prs: PrMap | undefined
   changedFiles: number
-  onClick: (name: string) => void
+  onClick: (name: string, event: MouseEvent) => void
 }) {
   const [hover, setHover] = useState(false)
   const pr = prs?.[row.name]
@@ -168,7 +173,7 @@ function RowLine({
       paddingLeft={1}
       paddingRight={1}
       backgroundColor={selected ? color.selected : undefined}
-      onMouseDown={() => onClick(row.name)}
+      onMouseDown={(event) => onClick(row.name, event)}
       onMouseOver={() => setHover(true)}
       onMouseOut={() => setHover(false)}
     >
@@ -209,7 +214,7 @@ function FoldLine({
   rail: string
   selected: boolean
   prs: PrMap | undefined
-  onClick: (key: string) => void
+  onClick: (key: string, event: MouseEvent) => void
 }) {
   const [hover, setHover] = useState(false)
   const dim = selected ? color.text : color.dim
@@ -228,7 +233,7 @@ function FoldLine({
       paddingLeft={1}
       paddingRight={1}
       backgroundColor={selected ? color.selected : undefined}
-      onMouseDown={() => onClick(foldKey(fold.key))}
+      onMouseDown={(event) => onClick(foldKey(fold.key), event)}
       onMouseOver={() => setHover(true)}
       onMouseOut={() => setHover(false)}
     >
@@ -256,6 +261,7 @@ export function BranchList({
   onSelect,
   onActivate,
   onScroll,
+  onMenu,
 }: {
   sections: Section[]
   // The stacks with an open fold. See listItems.
@@ -269,9 +275,14 @@ export function BranchList({
   // A double-click on a row.
   onActivate: (name: string) => void
   onScroll: (down: boolean) => void
+  // A right click on a row: open its menu at the cell of the click.
+  onMenu: (name: string, x: number, y: number) => void
 }) {
   const lastClick = useRef({ name: '', at: 0 })
-  const click = (name: string) => {
+  const click = (name: string, event: MouseEvent) => {
+    if (event.button === MouseButton.RIGHT) {
+      return onMenu(name, event.x, event.y)
+    }
     const now = Date.now()
     const double =
       lastClick.current.name === name &&

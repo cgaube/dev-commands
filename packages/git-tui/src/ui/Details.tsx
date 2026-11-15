@@ -179,9 +179,7 @@ function PrSection({
   if (!pr) {
     return (
       <text fg={color.dim} marginTop={1}>
-        {loading
-          ? 'loading the PR…'
-          : 'no PR yet · p pushes and opens a draft PR'}
+        {loading ? 'loading the PR…' : 'no PR yet · P creates one'}
       </text>
     )
   }

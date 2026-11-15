@@ -8,7 +8,7 @@
 import { existsSync } from 'fs'
 import { rm } from 'fs/promises'
 import { execa } from 'execa'
-import { gitOrNull, run } from './exec'
+import { gitOrNull, READ_ONLY_ENV, run } from './exec'
 
 // The file is in the git directory of the worktree, so that each worktree
 // has its own undo point, and it stays after a restart.
@@ -103,6 +103,7 @@ export async function filesWithMarkers(): Promise<string[]> {
   // `git diff --check` exits with 2 when it finds a problem, so read the
   // output also on failure.
   const { stdout } = await execa('git', ['diff', '--cached', '--check'], {
+    env: READ_ONLY_ENV,
     reject: false,
   })
   const out = String(stdout)

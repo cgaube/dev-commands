@@ -28,6 +28,9 @@ export type Repo = {
   defaultBranch: string
   currentBranch: string
   branches: Map<string, LocalBranch>
+  // The files with changes that are not committed, as `git status --short`
+  // shows them, and their count.
+  changes: string[]
   changedFiles: number
   rebase: RebaseState
   conflicts: string[]
@@ -125,7 +128,7 @@ export async function readRepo(): Promise<Repo> {
     ]),
     readDefaultBranch(),
     gitOrNull(['symbolic-ref', '--quiet', '--short', 'HEAD']),
-    git(['status', '--porcelain']),
+    gitLines(['status', '--porcelain']),
   ])
   const [gitDir, commonDir] = dirs.split('\n')
   const branches = await readBranches(defaultBranch)
@@ -146,7 +149,8 @@ export async function readRepo(): Promise<Repo> {
     // During a rebase, HEAD is detached, so there is no current branch.
     currentBranch: head ?? '',
     branches,
-    changedFiles: status.split('\n').filter(Boolean).length,
+    changes: status,
+    changedFiles: status.length,
     rebase,
     conflicts,
   }
@@ -212,10 +216,4 @@ export async function branchCommits(
     ? parseCommits(await gitOrNull(['log', '-1', COMMIT_FORMAT, baseSha]))[0]
     : undefined
   return { commits: parseCommits(commits), base: base ?? null }
-}
-
-// The files with changes that are not committed, as `git status --short`
-// shows them.
-export async function changedFiles(): Promise<string[]> {
-  return gitLines(['status', '--short'])
 }

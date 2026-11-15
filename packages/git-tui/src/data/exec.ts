@@ -2,7 +2,7 @@ import { execa, type Options } from 'execa'
 
 // Read-only git commands must not take the index lock. Otherwise `git status`
 // writes the index, the watcher sees the change, and the TUI reloads again.
-const READ_ONLY_ENV = { GIT_OPTIONAL_LOCKS: '0' }
+export const READ_ONLY_ENV = { GIT_OPTIONAL_LOCKS: '0' }
 
 export class CommandError extends Error {}
 
